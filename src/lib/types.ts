@@ -109,6 +109,8 @@ export type PropertyDocument = {
   id: string;
   property_id: string;
   file_name: string;
+  /** Freie Beschreibung, etwa "Nachtrag 2024" — kann leer bleiben. */
+  note: string;
   storage_path: string;
   size_bytes: number | null;
   uploaded_at: string;

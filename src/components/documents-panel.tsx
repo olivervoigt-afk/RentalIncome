@@ -42,6 +42,7 @@ export default function DocumentsPanel({
             <li key={doc.id} className="flex items-center justify-between gap-4 px-5 py-3">
               <div className="min-w-0 text-sm">
                 <DocumentLink path={doc.storage_path} name={doc.file_name} />
+                {doc.note && <p className="truncate">{doc.note}</p>}
                 <p className="text-muted">
                   {f.date(new Date(doc.uploaded_at))}
                   {doc.size_bytes ? ` · ${formatSize(doc.size_bytes)}` : ""}
@@ -69,15 +70,23 @@ export default function DocumentsPanel({
         <div className="border-t border-border bg-surface-muted/40 p-5">
           <InlineForm action={uploadDocument} submitLabel={t.property.upload}>
             <input type="hidden" name="property_id" value={propertyId} />
-            <Field label={t.property.chooseFile} hint={t.property.fileHint}>
-              <Input
-                name="file"
-                type="file"
-                accept=".pdf,image/*"
-                required
-                className="file:mr-3 file:rounded file:border-0 file:bg-surface-muted file:px-3 file:py-1 file:text-sm"
-              />
-            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label={t.property.chooseFile} hint={t.property.fileHint}>
+                <Input
+                  name="file"
+                  type="file"
+                  accept=".pdf,image/*"
+                  required
+                  className="file:mr-3 file:rounded file:border-0 file:bg-surface-muted file:px-3 file:py-1 file:text-sm"
+                />
+              </Field>
+              <Field
+                label={t.property.documentNote}
+                hint={t.property.documentNoteHint}
+              >
+                <Input name="note" placeholder={t.property.documentNotePlaceholder} />
+              </Field>
+            </div>
           </InlineForm>
         </div>
       )}

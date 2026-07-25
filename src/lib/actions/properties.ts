@@ -338,6 +338,7 @@ export async function uploadDocument(
   const { error } = await supabase.from("property_documents").insert({
     property_id,
     file_name: file.name,
+    note: text(formData, "note"),
     storage_path,
     size_bytes: file.size,
     uploaded_by: profile.id,

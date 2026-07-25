@@ -218,6 +218,10 @@ const de = {
     noDocuments: "Keine Dokumente hinterlegt.",
     chooseFile: "Datei auswählen",
     fileHint: "PDF oder Bild, maximal 20 MB.",
+    documentNote: "Beschreibung",
+    documentNoteHint:
+      'Optional, z. B. „Nachtrag 2024" oder „unterschriebene Fassung".',
+    documentNotePlaceholder: "z. B. Nachtrag 2024",
     upload: "Hochladen",
 
     historyTitle: "Vertragshistorie",
@@ -593,6 +597,9 @@ const en: Dict = {
     noDocuments: "No documents stored.",
     chooseFile: "Choose file",
     fileHint: "PDF or image, up to 20 MB.",
+    documentNote: "Description",
+    documentNoteHint: "Optional, e.g. “Addendum 2024” or “signed version”.",
+    documentNotePlaceholder: "e.g. Addendum 2024",
     upload: "Upload",
 
     historyTitle: "Contract history",
