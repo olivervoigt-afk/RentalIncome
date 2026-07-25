@@ -24,15 +24,21 @@ export default async function DashboardPage({
   const hidden = all.filter((p) => p.archived || p.summary.expired);
   const rows = showArchived ? all : all.filter((p) => !p.archived && !p.summary.expired);
 
-  const totals = rows.reduce(
-    (acc, p) => ({
-      due: acc.due + p.summary.totalDue,
-      received: acc.received + p.summary.totalReceived,
-      credits: acc.credits + p.summary.totalCredits,
-      balance: acc.balance + p.summary.balance,
-    }),
-    { due: 0, received: 0, credits: 0, balance: 0 },
-  );
+  const sum = (list: typeof all) =>
+    list.reduce(
+      (acc, p) => ({
+        due: acc.due + p.summary.totalDue,
+        received: acc.received + p.summary.totalReceived,
+        credits: acc.credits + p.summary.totalCredits,
+        balance: acc.balance + p.summary.balance,
+      }),
+      { due: 0, received: 0, credits: 0, balance: 0 },
+    );
+
+  const totals = sum(rows);
+  // Wird unter der Summenzeile ausgewiesen, damit die Gesamtsumme
+  // nachvollziehbar bleibt, ohne das Archiv einblenden zu müssen.
+  const hiddenTotals = showArchived ? null : sum(hidden);
 
   return (
     <div className="space-y-6">
@@ -174,6 +180,48 @@ export default async function DashboardPage({
                   </td>
                   <td colSpan={canEdit ? 4 : 3} />
                 </tr>
+
+                {hiddenTotals && hidden.length > 0 && (
+                  <>
+                    <tr className="text-muted">
+                      <td className="px-5 py-2" colSpan={2}>
+                        zzgl. {hidden.length} ausgeblendete
+                        {hidden.length === 1 ? "s Objekt" : " Objekte"}
+                      </td>
+                      <td className="tabular px-5 py-2 text-right">
+                        {formatEuro(hiddenTotals.due)}
+                      </td>
+                      <td className="tabular px-5 py-2 text-right">
+                        {formatEuro(hiddenTotals.received)}
+                      </td>
+                      <td className="tabular px-5 py-2 text-right">
+                        {formatEuro(hiddenTotals.balance)}
+                      </td>
+                      <td colSpan={canEdit ? 4 : 3} />
+                    </tr>
+                    <tr className="border-t border-border font-medium">
+                      <td className="px-5 py-2" colSpan={2}>
+                        Alle Objekte
+                      </td>
+                      <td className="tabular px-5 py-2 text-right">
+                        {formatEuro(totals.due + hiddenTotals.due)}
+                      </td>
+                      <td className="tabular px-5 py-2 text-right">
+                        {formatEuro(totals.received + hiddenTotals.received)}
+                      </td>
+                      <td
+                        className={`tabular px-5 py-2 text-right ${
+                          totals.balance + hiddenTotals.balance < 0
+                            ? "text-negative"
+                            : "text-positive"
+                        }`}
+                      >
+                        {formatEuro(totals.balance + hiddenTotals.balance)}
+                      </td>
+                      <td colSpan={canEdit ? 4 : 3} />
+                    </tr>
+                  </>
+                )}
               </tfoot>
             </table>
           </div>
