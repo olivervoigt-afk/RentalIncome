@@ -107,7 +107,9 @@ export default async function DashboardPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                  <th className="px-5 py-3 font-medium">Objekt</th>
+                  <th className="w-[30%] min-w-[240px] px-5 py-3 font-medium">
+                    Objekt
+                  </th>
                   <th className="px-5 py-3 text-right font-medium">Fällig bisher</th>
                   <th className="px-5 py-3 text-right font-medium">Erhalten</th>
                   <th className="px-5 py-3 text-right font-medium">Saldo</th>
@@ -123,16 +125,25 @@ export default async function DashboardPage({
 
                 return (
                   <tbody key={location}>
-                    <tr className="border-b border-border bg-surface-muted/60">
+                    <tr className="border-y-2 border-border bg-surface-muted">
                       <th
                         scope="colgroup"
                         colSpan={columnCount}
-                        className="px-5 py-2 text-left text-sm font-semibold"
+                        className="border-l-4 border-accent px-5 py-3 text-left"
                       >
-                        {location}
-                        <span className="ml-2 font-normal text-muted">
-                          {items.length} {items.length === 1 ? "Objekt" : "Objekte"} ·{" "}
-                          Saldo {formatEuro(groupTotals.balance)}
+                        <span className="text-lg font-bold tracking-tight">
+                          {location}
+                        </span>
+                        <span className="ml-3 text-sm font-normal text-muted">
+                          {items.length} {items.length === 1 ? "Objekt" : "Objekte"}
+                          {" · Saldo "}
+                          <span
+                            className={`tabular font-medium ${
+                              groupTotals.balance < 0 ? "text-negative" : "text-positive"
+                            }`}
+                          >
+                            {formatEuro(groupTotals.balance)}
+                          </span>
                         </span>
                       </th>
                     </tr>
@@ -142,10 +153,10 @@ export default async function DashboardPage({
                         key={p.id}
                         className="border-b border-border/60 hover:bg-surface-muted/40"
                       >
-                        <td className="px-5 py-3">
+                        <td className="px-5 py-3 align-top">
                           <Link
                             href={`/objekte/${p.id}`}
-                            className="font-medium hover:text-accent hover:underline"
+                            className="font-medium text-balance hover:text-accent hover:underline"
                           >
                             {p.name}
                           </Link>
