@@ -152,6 +152,104 @@ export async function getPropertyDetail(
   };
 }
 
+export type Ta24Row = {
+  propertyId: string;
+  name: string;
+  location: string | null;
+  archived: boolean;
+  /** Zahlungseingänge je Kalenderjahr: Anzahl und Summe. */
+  byYear: Map<number, { count: number; sum: number }>;
+  total: number;
+};
+
+export type Ta24Report = {
+  years: number[];
+  rows: Ta24Row[];
+  /** Summe aller Objekte je Jahr. */
+  totalsByYear: Map<number, { count: number; sum: number }>;
+  grandTotal: number;
+};
+
+/**
+ * Auswertung für die maltesische Steuererklärung.
+ *
+ * Maßgeblich ist das **Zahlungsdatum**, nicht die Fälligkeit: eine im Januar
+ * eingegangene Dezembermiete zählt ins Januar-Jahr (Ist-Prinzip). Archivierte
+ * Objekte bleiben enthalten, da ihre Zahlungen zu vergangenen Jahren gehören.
+ * Gutschriften fließen bewusst nicht ein — es sind keine Geldeingänge.
+ */
+export async function getTa24Report(): Promise<Ta24Report> {
+  const supabase = await createClient();
+
+  const [propertiesResult, locationsResult, payments] = await Promise.all([
+    supabase.from("properties").select("*").eq("ta24", true).order("name"),
+    supabase.from("locations").select("*"),
+    fetchAll<Payment>(supabase, "payments"),
+  ]);
+
+  if (propertiesResult.error) throw propertiesResult.error;
+
+  const properties = (propertiesResult.data ?? []) as Property[];
+  const locationName = new Map(
+    ((locationsResult.data ?? []) as Location[]).map((l) => [l.id, l.name]),
+  );
+  const relevant = new Set(properties.map((p) => p.id));
+  const byProperty = new Map<string, Payment[]>();
+
+  for (const payment of payments) {
+    if (!relevant.has(payment.property_id)) continue;
+    byProperty.set(payment.property_id, [
+      ...(byProperty.get(payment.property_id) ?? []),
+      payment,
+    ]);
+  }
+
+  const years = new Set<number>();
+  const totalsByYear = new Map<number, { count: number; sum: number }>();
+  let grandTotal = 0;
+
+  const rows: Ta24Row[] = properties.map((property) => {
+    const byYear = new Map<number, { count: number; sum: number }>();
+    let total = 0;
+
+    for (const payment of byProperty.get(property.id) ?? []) {
+      const year = Number(payment.paid_on.slice(0, 4));
+      const amount = Number(payment.amount);
+
+      years.add(year);
+      total += amount;
+      grandTotal += amount;
+
+      const cell = byYear.get(year) ?? { count: 0, sum: 0 };
+      byYear.set(year, { count: cell.count + 1, sum: cell.sum + amount });
+
+      const overall = totalsByYear.get(year) ?? { count: 0, sum: 0 };
+      totalsByYear.set(year, {
+        count: overall.count + 1,
+        sum: overall.sum + amount,
+      });
+    }
+
+    return {
+      propertyId: property.id,
+      name: property.name,
+      location: property.location_id
+        ? (locationName.get(property.location_id) ?? null)
+        : null,
+      archived: property.archived,
+      byYear,
+      total,
+    };
+  });
+
+  return {
+    years: [...years].sort((a, b) => b - a),
+    rows,
+    totalsByYear,
+    grandTotal,
+  };
+}
+
 export async function getLocations(): Promise<Location[]> {
   const supabase = await createClient();
   const { data } = await supabase

@@ -7,6 +7,7 @@ import { ROLE_LABELS, type Profile } from "@/lib/types";
 
 const LINKS = [
   { href: "/", label: "Dashboard", exact: true },
+  { href: "/ta24", label: "TA24" },
   { href: "/benutzer", label: "Benutzer", adminOnly: true },
   { href: "/einstellungen", label: "Einstellungen" },
 ];
