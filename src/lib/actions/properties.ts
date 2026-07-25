@@ -108,13 +108,28 @@ export async function updateProperty(
   if (typeof input === "string") return { error: input };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("properties").update(input).eq("id", id);
+  // select() liefert die geänderten Zeilen zurück. Ohne diese Prüfung meldet
+  // die Datenbank auch dann Erfolg, wenn gar keine Zeile betroffen war — etwa
+  // weil das Objekt zwischenzeitlich gelöscht wurde oder die Rechte fehlen.
+  const { data, error } = await supabase
+    .from("properties")
+    .update(input)
+    .eq("id", id)
+    .select("id");
 
   if (error) return { error: error.message };
+  if (!data?.length) {
+    return {
+      error:
+        "Es wurde nichts gespeichert — das Objekt existiert nicht mehr oder " +
+        "die Seite ist veraltet. Bitte die Seite neu laden.",
+    };
+  }
 
   revalidatePath("/");
   revalidatePath("/objekte");
   revalidatePath(`/objekte/${id}`);
+  revalidatePath(`/objekte/${id}/bearbeiten`);
   return { success: "Änderungen gespeichert." };
 }
 
