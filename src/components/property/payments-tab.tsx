@@ -1,5 +1,5 @@
 import Link from "next/link";
-import ConfirmButton from "@/components/confirm-button";
+import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
 import { Badge, Card, CardHeader, Field, Input, Select } from "@/components/ui";
 import { addPayment, deletePayment } from "@/lib/actions/properties";
@@ -238,11 +238,13 @@ function PaymentTable({
               <td className="px-5 py-3 text-muted">{payment.note || "—"}</td>
               {canEdit && (
                 <td className="px-5 py-3 text-right">
-                  <form action={deletePayment}>
-                    <input type="hidden" name="id" value={payment.id} />
-                    <input type="hidden" name="property_id" value={propertyId} />
-                    <ConfirmButton message="Diese Zahlung löschen?">Löschen</ConfirmButton>
-                  </form>
+                  <DangerAction
+                    action={deletePayment}
+                    fields={{ id: payment.id, property_id: propertyId }}
+                    trigger="Löschen"
+                    title="Zahlung löschen?"
+                    description={`${formatEuro(Number(payment.amount))} vom ${formatDate(payment.paid_on)} wird entfernt. Der Saldo erhöht sich entsprechend.`}
+                  />
                 </td>
               )}
             </tr>

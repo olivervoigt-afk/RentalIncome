@@ -1,5 +1,5 @@
 import ChangePasswordForm from "@/components/change-password-form";
-import ConfirmButton from "@/components/confirm-button";
+import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
 import { Badge, Card, CardHeader, Field, Input } from "@/components/ui";
 import { addPaymentSource, deletePaymentSource } from "@/lib/actions/users";
@@ -7,7 +7,7 @@ import { requireProfile } from "@/lib/auth";
 import { getPaymentSources } from "@/lib/queries";
 import { ROLE_LABELS } from "@/lib/types";
 
-export const metadata = { title: "Einstellungen — RentalIncome" };
+export const metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const profile = await requireProfile();
@@ -61,14 +61,13 @@ export default async function SettingsPage() {
                 className="flex items-center justify-between gap-4 px-5 py-3 text-sm"
               >
                 <span className="font-medium">{source.name}</span>
-                <form action={deletePaymentSource}>
-                  <input type="hidden" name="id" value={source.id} />
-                  <ConfirmButton
-                    message={`„${source.name}" löschen? Bereits erfasste Zahlungen behalten ihren Betrag, verlieren aber die Quellenangabe.`}
-                  >
-                    Löschen
-                  </ConfirmButton>
-                </form>
+                <DangerAction
+                  action={deletePaymentSource}
+                  fields={{ id: source.id }}
+                  trigger="Löschen"
+                  title="Zahlungsquelle löschen?"
+                  description={`„${source.name}" steht künftig nicht mehr zur Auswahl. Bereits erfasste Zahlungen behalten ihren Betrag, verlieren aber die Quellenangabe.`}
+                />
               </li>
             ))}
           </ul>

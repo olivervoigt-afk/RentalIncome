@@ -1,4 +1,4 @@
-# RentalIncome
+# Oylio Rental Dashboard
 
 Webanwendung zur Verwaltung von Immobilien und deren Mieteinkünften.
 

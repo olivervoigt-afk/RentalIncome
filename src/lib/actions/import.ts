@@ -51,6 +51,8 @@ function parseAmount(raw: string): number | null {
 
 function parseFrequency(raw: string): PaymentFrequency {
   const value = raw.trim().toLowerCase();
+  // Reihenfolge zählt: "halbjährlich" enthält auch "jähr".
+  if (/halbjähr|halbjahr|semi|6/.test(value)) return "semiannual";
   if (/quart|vierteljähr|3/.test(value)) return "quarterly";
   if (/jähr|jahr|annual|year|12/.test(value)) return "yearly";
   return "monthly";

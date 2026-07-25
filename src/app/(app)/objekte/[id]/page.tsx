@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ConfirmButton from "@/components/confirm-button";
+import DangerAction from "@/components/danger-action";
 import DocumentsPanel from "@/components/documents-panel";
 import CreditsTab from "@/components/property/credits-tab";
 import OverviewTab from "@/components/property/overview-tab";
@@ -189,15 +189,15 @@ export default async function PropertyDetailPage({
                 unwiderruflich. Zum reinen Ausblenden bitte archivieren.
               </p>
             </div>
-            <form action={deleteProperty}>
-              <input type="hidden" name="id" value={property.id} />
-              <ConfirmButton
-                message={`"${property.name}" endgültig löschen? Alle Zahlungen und Gutschriften gehen verloren.`}
-                className="rounded-md border border-border px-3.5 py-2 font-medium"
-              >
-                Endgültig löschen
-              </ConfirmButton>
-            </form>
+            <DangerAction
+              action={deleteProperty}
+              fields={{ id: property.id }}
+              trigger="Endgültig löschen"
+              triggerClassName="rounded-md border border-negative/40 px-3.5 py-2 text-sm font-medium text-negative transition-colors hover:bg-negative/10"
+              title={`${property.name} löschen?`}
+              description={`Das Objekt wird mit ${payments.length} Zahlungen, ${credits.length} Gutschriften, der kompletten Mietstaffel und allen Dokumenten entfernt.`}
+              confirmWord={property.name}
+            />
           </div>
         </Card>
       )}

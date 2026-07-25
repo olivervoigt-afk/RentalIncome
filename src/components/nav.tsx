@@ -26,7 +26,7 @@ export default function Nav({ profile }: { profile: Profile }) {
     <header className="border-b border-border bg-surface">
       <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-6">
         <Link href="/" className="font-semibold tracking-tight">
-          RentalIncome
+          Oylio Rental Dashboard
         </Link>
 
         <nav className="flex items-center gap-1">

@@ -7,7 +7,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { PaymentFrequency } from "@/lib/types";
 import type { ActionState } from "./auth";
 
-const FREQUENCIES: PaymentFrequency[] = ["monthly", "quarterly", "yearly"];
+const FREQUENCIES: PaymentFrequency[] = [
+  "monthly",
+  "quarterly",
+  "semiannual",
+  "yearly",
+];
 
 function text(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();

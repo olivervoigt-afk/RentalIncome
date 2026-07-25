@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RentalIncome",
+  title: {
+    default: "Oylio Rental Dashboard",
+    template: "%s · Oylio Rental",
+  },
   description: "Verwaltung von Immobilien und Mieteinkünften",
 };
 

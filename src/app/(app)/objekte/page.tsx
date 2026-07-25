@@ -6,7 +6,7 @@ import { getPropertiesWithSummary } from "@/lib/queries";
 import { formatDate, formatEuro } from "@/lib/rent";
 import { FREQUENCY_LABELS } from "@/lib/types";
 
-export const metadata = { title: "Objekte — RentalIncome" };
+export const metadata = { title: "Objekte" };
 
 export default async function PropertiesPage({
   searchParams,

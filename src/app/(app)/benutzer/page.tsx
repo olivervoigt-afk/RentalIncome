@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import ConfirmButton from "@/components/confirm-button";
+import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
 import RoleSelect from "@/components/role-select";
 import ResetPasswordForm from "@/components/reset-password-form";
@@ -9,7 +9,7 @@ import { requireProfile } from "@/lib/auth";
 import { getProfiles } from "@/lib/queries";
 import { ROLE_LABELS } from "@/lib/types";
 
-export const metadata = { title: "Benutzer — RentalIncome" };
+export const metadata = { title: "Benutzer" };
 
 export default async function UsersPage() {
   const me = await requireProfile();
@@ -64,14 +64,13 @@ export default async function UsersPage() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     {profile.id !== me.id && (
-                      <form action={deleteUser}>
-                        <input type="hidden" name="id" value={profile.id} />
-                        <ConfirmButton
-                          message={`Konto von ${profile.full_name || profile.email} löschen?`}
-                        >
-                          Löschen
-                        </ConfirmButton>
-                      </form>
+                      <DangerAction
+                        action={deleteUser}
+                        fields={{ id: profile.id }}
+                        trigger="Löschen"
+                        title="Benutzerkonto löschen?"
+                        description={`${profile.full_name || profile.email} verliert den Zugang. Erfasste Zahlungen bleiben erhalten.`}
+                      />
                     )}
                   </td>
                 </tr>

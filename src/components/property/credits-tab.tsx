@@ -1,4 +1,4 @@
-import ConfirmButton from "@/components/confirm-button";
+import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
 import { Card, CardHeader, Field, Input } from "@/components/ui";
 import { addCredit, deleteCredit } from "@/lib/actions/properties";
@@ -84,13 +84,13 @@ export default function CreditsTab({
                     <td className="px-5 py-3 text-muted">{credit.reason || "—"}</td>
                     {canEdit && (
                       <td className="px-5 py-3 text-right">
-                        <form action={deleteCredit}>
-                          <input type="hidden" name="id" value={credit.id} />
-                          <input type="hidden" name="property_id" value={propertyId} />
-                          <ConfirmButton message="Diese Gutschrift löschen?">
-                            Löschen
-                          </ConfirmButton>
-                        </form>
+                        <DangerAction
+                          action={deleteCredit}
+                          fields={{ id: credit.id, property_id: propertyId }}
+                          trigger="Löschen"
+                          title="Gutschrift löschen?"
+                          description={`${formatEuro(Number(credit.amount))} vom ${formatDate(credit.credited_on)} wird entfernt.`}
+                        />
                       </td>
                     )}
                   </tr>

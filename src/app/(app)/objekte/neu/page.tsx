@@ -4,7 +4,7 @@ import PropertyForm from "@/components/property-form";
 import { createProperty } from "@/lib/actions/properties";
 import { requireProfile } from "@/lib/auth";
 
-export const metadata = { title: "Objekt anlegen — RentalIncome" };
+export const metadata = { title: "Objekt anlegen" };
 
 export default async function NewPropertyPage() {
   const profile = await requireProfile();

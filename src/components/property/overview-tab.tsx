@@ -1,4 +1,4 @@
-import ConfirmButton from "@/components/confirm-button";
+import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
 import { Card, CardHeader, Field, Input } from "@/components/ui";
 import { addRentPeriod, deleteRentPeriod } from "@/lib/actions/properties";
@@ -73,13 +73,13 @@ export default function OverviewTab({
                   </p>
                 </div>
                 {canEdit && (
-                  <form action={deleteRentPeriod}>
-                    <input type="hidden" name="id" value={period.id} />
-                    <input type="hidden" name="property_id" value={property.id} />
-                    <ConfirmButton message="Diesen Mietzeitraum löschen?">
-                      Löschen
-                    </ConfirmButton>
-                  </form>
+                  <DangerAction
+                    action={deleteRentPeriod}
+                    fields={{ id: period.id, property_id: property.id }}
+                    trigger="Löschen"
+                    title="Mietzeitraum löschen?"
+                    description={`${formatEuro(Number(period.amount))} ab ${formatDate(period.valid_from)} wird entfernt. Der Saldo wird neu berechnet.`}
+                  />
                 )}
               </li>
             ))}

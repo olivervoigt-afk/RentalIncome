@@ -5,7 +5,7 @@ import { getProfile } from "@/lib/auth";
 import { getPropertiesWithSummary } from "@/lib/queries";
 import { formatDate, formatEuro } from "@/lib/rent";
 
-export const metadata = { title: "Dashboard — RentalIncome" };
+export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage({
   searchParams,

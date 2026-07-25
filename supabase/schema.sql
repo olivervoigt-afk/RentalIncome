@@ -9,8 +9,11 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create type payment_frequency as enum ('monthly', 'quarterly', 'yearly');
+  create type payment_frequency as enum ('monthly', 'quarterly', 'semiannual', 'yearly');
 exception when duplicate_object then null; end $$;
+
+-- Für Bestandsdatenbanken, die noch ohne 'semiannual' angelegt wurden.
+alter type payment_frequency add value if not exists 'semiannual';
 
 
 -- ---------- Benutzerprofile ----------

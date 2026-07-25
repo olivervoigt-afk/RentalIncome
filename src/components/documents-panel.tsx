@@ -1,4 +1,4 @@
-import ConfirmButton from "@/components/confirm-button";
+import DangerAction from "@/components/danger-action";
 import DocumentLink from "@/components/document-link";
 import InlineForm from "@/components/inline-form";
 import { Card, CardHeader, Field, Input } from "@/components/ui";
@@ -41,12 +41,17 @@ export default function DocumentsPanel({
                 </p>
               </div>
               {canEdit && (
-                <form action={deleteDocument}>
-                  <input type="hidden" name="id" value={doc.id} />
-                  <input type="hidden" name="property_id" value={propertyId} />
-                  <input type="hidden" name="storage_path" value={doc.storage_path} />
-                  <ConfirmButton message="Dieses Dokument löschen?">Löschen</ConfirmButton>
-                </form>
+                <DangerAction
+                  action={deleteDocument}
+                  fields={{
+                    id: doc.id,
+                    property_id: propertyId,
+                    storage_path: doc.storage_path,
+                  }}
+                  trigger="Löschen"
+                  title="Dokument löschen?"
+                  description={`„${doc.file_name}" wird aus dem Speicher entfernt.`}
+                />
               )}
             </li>
           ))}

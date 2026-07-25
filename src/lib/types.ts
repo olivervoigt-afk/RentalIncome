@@ -1,5 +1,5 @@
 export type UserRole = "admin" | "editor" | "viewer";
-export type PaymentFrequency = "monthly" | "quarterly" | "yearly";
+export type PaymentFrequency = "monthly" | "quarterly" | "semiannual" | "yearly";
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Administrator",
@@ -10,6 +10,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 export const FREQUENCY_LABELS: Record<PaymentFrequency, string> = {
   monthly: "Monatlich",
   quarterly: "Quartalsweise",
+  semiannual: "Halbjährlich",
   yearly: "Jährlich",
 };
 
@@ -17,6 +18,7 @@ export const FREQUENCY_LABELS: Record<PaymentFrequency, string> = {
 export const FREQUENCY_MONTHS: Record<PaymentFrequency, number> = {
   monthly: 1,
   quarterly: 3,
+  semiannual: 6,
   yearly: 12,
 };
 

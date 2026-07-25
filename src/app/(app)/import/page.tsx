@@ -3,7 +3,7 @@ import ImportWizard from "@/components/import-wizard";
 import { Card, CardHeader } from "@/components/ui";
 import { requireProfile } from "@/lib/auth";
 
-export const metadata = { title: "Import — RentalIncome" };
+export const metadata = { title: "Import" };
 
 export default async function ImportPage() {
   const profile = await requireProfile();
