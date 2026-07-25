@@ -7,6 +7,7 @@ import type { Formatters } from "@/lib/format";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import { installments, toISODate } from "@/lib/rent";
 import type { Payment, PaymentSource, Property, RentPeriod } from "@/lib/types";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 const PAGE_SIZE = 25;
 
@@ -167,9 +168,11 @@ export default function PaymentsTab({
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-surface-muted/40 px-5 py-3">
           <p className="text-sm text-muted">
             {view === "soll" ? t.property.dueLabel : t.property.receivedLabel}
-            {t.property.receivedIn(selectedYear)}
+            {selectedYear === "alle"
+              ? t.property.receivedTotal
+              : fill(t.property.receivedInYear, { year: selectedYear })}
             {" · "}
-            {t.property.entries(rows.length)}
+            {plural(t.property.entries, rows.length)}
           </p>
           <p className="tabular text-lg font-semibold">{f.euro(periodTotal)}</p>
         </div>
@@ -196,7 +199,7 @@ export default function PaymentsTab({
         {totalPages > 1 && (
           <div className="flex items-center justify-between gap-4 border-t border-border px-5 py-3 text-sm">
             <span className="text-muted">
-              {t.property.pageOf(currentPage, totalPages)}
+              {fill(t.property.pageOf, { page: currentPage, total: totalPages })}
             </span>
             <div className="flex gap-2">
               <PageLink

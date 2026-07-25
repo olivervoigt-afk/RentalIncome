@@ -6,6 +6,7 @@ import type { Formatters } from "@/lib/format";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import { toISODate } from "@/lib/rent";
 import type { Credit } from "@/lib/types";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export default function CreditsTab({
   t,
@@ -59,7 +60,7 @@ export default function CreditsTab({
           <h2 className="text-base font-semibold">
             {t.property.creditsTitle}
             <span className="ml-2 text-sm font-normal text-muted">
-              {t.property.entries(credits.length)}
+              {plural(t.property.entries, credits.length)}
             </span>
           </h2>
           <p className="tabular text-lg font-semibold">{f.euro(total)}</p>

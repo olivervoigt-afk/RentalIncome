@@ -7,6 +7,7 @@ import { getDict } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/lib/types";
 import type { ActionState } from "./auth";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 const ROLES: UserRole[] = ["admin", "editor", "viewer"];
 
@@ -54,7 +55,7 @@ export async function createUser(
   await admin.from("profiles").update({ full_name, role }).eq("id", data.user.id);
 
   revalidatePath("/benutzer");
-  return { success: t.actions.userCreated(full_name) };
+  return { success: fill(t.actions.userCreated, { name: full_name }) };
 }
 
 export async function updateUserRole(formData: FormData) {
@@ -138,7 +139,7 @@ export async function addPaymentSource(
   }
 
   revalidatePath("/einstellungen");
-  return { success: t.actions.added(name) };
+  return { success: fill(t.actions.added, { name }) };
 }
 
 export async function deletePaymentSource(formData: FormData) {
@@ -177,7 +178,7 @@ export async function addLocation(
 
   revalidatePath("/einstellungen");
   revalidatePath("/");
-  return { success: t.actions.added(name) };
+  return { success: fill(t.actions.added, { name }) };
 }
 
 export async function deleteLocation(formData: FormData) {

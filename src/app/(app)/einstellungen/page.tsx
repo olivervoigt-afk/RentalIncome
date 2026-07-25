@@ -11,6 +11,7 @@ import {
 import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getLocations, getPaymentSources } from "@/lib/queries";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Einstellungen" };
 
@@ -76,7 +77,7 @@ export default async function SettingsPage() {
                   fields={{ id: location.id }}
                   trigger={t.common.delete}
                   title={t.settings.deleteLocation}
-                  description={t.settings.deleteLocationDetail(location.name)}
+                  description={fill(t.settings.deleteLocationDetail, { name: location.name })}
                 />
               </li>
             ))}
@@ -111,7 +112,7 @@ export default async function SettingsPage() {
                   fields={{ id: source.id }}
                   trigger={t.common.delete}
                   title={t.settings.deleteSource}
-                  description={t.settings.deleteSourceDetail(source.name)}
+                  description={fill(t.settings.deleteSourceDetail, { name: source.name })}
                 />
               </li>
             ))}

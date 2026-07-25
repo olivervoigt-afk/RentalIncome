@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useDict } from "@/components/dict-provider";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 /** Blendet archivierte und abgelaufene Objekte ein bzw. aus. */
 export default function ArchiveToggle({
@@ -37,7 +38,7 @@ export default function ArchiveToggle({
       {active ? (
         t.dashboard.hideArchive
       ) : count > 0 ? (
-        t.dashboard.hiddenToggle(count)
+        plural(t.dashboard.hiddenToggle, count)
       ) : (
         t.dashboard.showArchive
       )}

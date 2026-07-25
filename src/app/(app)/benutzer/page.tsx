@@ -8,6 +8,7 @@ import { createUser, deleteUser } from "@/lib/actions/users";
 import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getProfiles } from "@/lib/queries";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Benutzer" };
 
@@ -27,7 +28,7 @@ export default async function UsersPage() {
       </div>
 
       <Card>
-        <CardHeader title={t.users.accounts} description={t.users.count(profiles.length)} />
+        <CardHeader title={t.users.accounts} description={fill(t.users.count, { n: profiles.length })} />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -68,7 +69,7 @@ export default async function UsersPage() {
                         fields={{ id: profile.id }}
                         trigger={t.common.delete}
                         title={t.users.deleteTitle}
-                        description={t.users.deleteDetail(profile.full_name || profile.email)}
+                        description={fill(t.users.deleteDetail, { name: profile.full_name || profile.email })}
                       />
                     )}
                   </td>

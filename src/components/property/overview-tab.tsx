@@ -6,6 +6,7 @@ import type { Formatters } from "@/lib/format";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import type { PropertySummary } from "@/lib/rent";
 import type { Property, RentPeriod } from "@/lib/types";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export default function OverviewTab({
   t,
@@ -32,11 +33,11 @@ export default function OverviewTab({
             label={t.property.remaining}
             value={
               summary.remainingMonths > 0
-                ? t.property.remainingMonths(summary.remainingMonths)
+                ? fill(t.property.remainingMonths, { n: summary.remainingMonths })
                 : t.property.expired
             }
           />
-          <Detail label={t.property.termTotal} value={t.property.termMonths(property.term_months)} />
+          <Detail label={t.property.termTotal} value={fill(t.property.termMonths, { n: property.term_months })} />
           <Detail
             label={t.property.frequency}
             value={t.frequency[property.payment_frequency]}
@@ -75,8 +76,8 @@ export default function OverviewTab({
                   </p>
                   <p className="text-muted">
                     {period.valid_to
-                      ? t.property.fromTo(f.date(period.valid_from), f.date(period.valid_to))
-                      : t.property.fromOpen(f.date(period.valid_from))}
+                      ? fill(t.property.fromTo, { from: f.date(period.valid_from), to: f.date(period.valid_to) })
+                      : fill(t.property.fromOpen, { from: f.date(period.valid_from) })}
                   </p>
                 </div>
                 {canEdit && (
@@ -85,7 +86,7 @@ export default function OverviewTab({
                     fields={{ id: period.id, property_id: property.id }}
                     trigger={t.common.delete}
                     title={t.property.rentSteps}
-                    description={`${f.euro(Number(period.amount))} — ${t.property.fromOpen(f.date(period.valid_from))}`}
+                    description={`${f.euro(Number(period.amount))} — ${fill(t.property.fromOpen, { from: f.date(period.valid_from) })}`}
                   />
                 )}
               </li>

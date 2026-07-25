@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useDict } from "@/components/dict-provider";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 /**
  * Löschaktion mit Rückfrage in einem eigenen Dialog.
@@ -81,7 +82,7 @@ export default function DangerAction({
             {confirmWord && (
               <label className="mt-4 block">
                 <span className="mb-1.5 block text-sm">
-                  {t.common.confirmType(confirmWord)}
+                  {fill(t.common.confirmType, { word: confirmWord })}
                 </span>
                 <input
                   autoFocus

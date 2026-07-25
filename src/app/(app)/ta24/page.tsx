@@ -4,6 +4,7 @@ import { Badge, ButtonLink, Card, CardHeader, EmptyState } from "@/components/ui
 import { formatters } from "@/lib/format";
 import { getDict } from "@/lib/i18n";
 import { getTa24Report } from "@/lib/queries";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "TA24" };
 
@@ -116,9 +117,9 @@ export default async function Ta24Page({
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <h2 className="text-base font-semibold">
-            {t.ta24.breakdown(selected)}
+            {fill(t.ta24.breakdown, { year: selected })}
             <span className="ml-2 text-sm font-normal text-muted">
-              {t.ta24.countProperties(rows.length)} · {t.ta24.countPayments(yearTotal.count)}
+              {plural(t.ta24.countProperties, rows.length)} · {plural(t.ta24.countPayments, yearTotal.count)}
             </span>
           </h2>
           <div className="flex flex-wrap items-center gap-1">
@@ -141,7 +142,7 @@ export default async function Ta24Page({
               prefetch={false}
               className="ml-2"
             >
-              {t.ta24.exportYear(selected)}
+              {fill(t.ta24.exportYear, { year: selected })}
             </ButtonLink>
           </div>
         </div>
@@ -153,7 +154,7 @@ export default async function Ta24Page({
                 <th className="w-[40%] min-w-[240px] px-5 py-3 font-medium">{t.ta24.property}</th>
                 <th className="px-5 py-3 font-medium">{t.ta24.location}</th>
                 <th className="px-5 py-3 text-right font-medium">{t.ta24.payments}</th>
-                <th className="px-5 py-3 text-right font-medium">{t.ta24.receivedIn(selected)}</th>
+                <th className="px-5 py-3 text-right font-medium">{fill(t.ta24.receivedIn, { year: selected })}</th>
               </tr>
             </thead>
             <tbody>
@@ -187,7 +188,7 @@ export default async function Ta24Page({
             <tfoot>
               <tr className="border-t-2 border-border bg-surface-muted/50 font-medium">
                 <td className="px-5 py-3" colSpan={2}>
-                  {t.ta24.sumOf(selected)}
+                  {fill(t.ta24.sumOf, { year: selected })}
                 </td>
                 <td className="tabular px-5 py-3 text-right text-muted">
                   {yearTotal.count}

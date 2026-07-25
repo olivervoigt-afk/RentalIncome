@@ -5,6 +5,7 @@ import { getProfile } from "@/lib/auth";
 import { formatters } from "@/lib/format";
 import { getDict } from "@/lib/i18n";
 import { getPropertiesWithSummary, type PropertyWithSummary } from "@/lib/queries";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Dashboard" };
 
@@ -66,9 +67,12 @@ export default async function DashboardPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t.dashboard.title}</h1>
           <p className="mt-1 text-sm text-muted">
-            {t.dashboard.countProperties(rows.length)}
-            {orderedGroups.length > 1 && t.dashboard.inLocations(orderedGroups.length)}
-            {hidden.length > 0 && !showArchived && t.dashboard.hiddenCount(hidden.length)}
+            {plural(t.dashboard.countProperties, rows.length)}
+            {orderedGroups.length > 1 &&
+              fill(t.dashboard.inLocations, { n: orderedGroups.length })}
+            {hidden.length > 0 &&
+              !showArchived &&
+              fill(t.dashboard.hiddenCount, { n: hidden.length })}
           </p>
         </div>
         {canEdit && <ButtonLink href="/objekte/neu">{t.dashboard.newProperty}</ButtonLink>}
@@ -138,7 +142,7 @@ export default async function DashboardPage({
                           {location}
                         </span>
                         <span className="ml-3 text-sm font-normal text-muted">
-                          {t.dashboard.countProperties(items.length)}
+                          {plural(t.dashboard.countProperties, items.length)}
                         </span>
                       </th>
                     </tr>
@@ -173,7 +177,7 @@ export default async function DashboardPage({
                           {f.euro(p.summary.totalReceived)}
                           {p.summary.totalCredits > 0 && (
                             <span className="block text-xs text-muted">
-                              {t.dashboard.creditSuffix(f.euro(p.summary.totalCredits))}
+                              {fill(t.dashboard.creditSuffix, { amount: f.euro(p.summary.totalCredits) })}
                             </span>
                           )}
                         </td>
@@ -186,7 +190,7 @@ export default async function DashboardPage({
                         </td>
                         <td className="tabular px-5 py-3 text-right text-muted">
                           {p.summary.remainingMonths > 0
-                            ? t.dashboard.months(p.summary.remainingMonths)
+                            ? fill(t.dashboard.months, { n: p.summary.remainingMonths })
                             : t.common.none}
                         </td>
                         <td className="px-5 py-3 text-muted">
@@ -215,7 +219,7 @@ export default async function DashboardPage({
                     {orderedGroups.length > 1 && (
                       <tr className="border-b border-border text-muted">
                         <td className="px-5 py-2 text-right text-xs uppercase tracking-wide">
-                          {t.dashboard.sumOf(location)}
+                          {fill(t.dashboard.sumOf, { location })}
                         </td>
                         <td className="tabular px-5 py-2 text-right">
                           {f.euro(groupTotals.due)}
@@ -251,7 +255,7 @@ export default async function DashboardPage({
                   <>
                     <tr className="text-muted">
                       <td className="px-5 py-2">
-                        {t.dashboard.plusHidden(hidden.length)}
+                        {plural(t.dashboard.plusHidden, hidden.length)}
                       </td>
                       <td className="tabular px-5 py-2 text-right">
                         {f.euro(hiddenTotals.due)}

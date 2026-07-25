@@ -6,6 +6,7 @@ import { deleteDocument, uploadDocument } from "@/lib/actions/properties";
 import type { Formatters } from "@/lib/format";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import type { PropertyDocument } from "@/lib/types";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 function formatSize(bytes: number | null): string {
   if (!bytes) return "";
@@ -56,7 +57,7 @@ export default function DocumentsPanel({
                   }}
                   trigger={t.common.delete}
                   title={t.documents.deleteTitle}
-                  description={t.documents.deleteDetail(doc.file_name)}
+                  description={fill(t.documents.deleteDetail, { name: doc.file_name })}
                 />
               )}
             </li>

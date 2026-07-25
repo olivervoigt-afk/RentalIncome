@@ -6,6 +6,7 @@ import { updateProperty } from "@/lib/actions/properties";
 import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getLocations, getPropertyDetail } from "@/lib/queries";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export default async function EditPropertyPage({
   params,
@@ -30,7 +31,7 @@ export default async function EditPropertyPage({
           {t.form.backToProperty}
         </Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-          {t.form.editSuffix(detail.property.name)}
+          {fill(t.form.editSuffix, { name: detail.property.name })}
         </h1>
       </div>
 

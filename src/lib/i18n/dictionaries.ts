@@ -13,6 +13,32 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
 };
 
+
+/**
+ * Setzt Platzhalter der Form {name} ein.
+ *
+ * Die Wörterbücher enthalten bewusst nur Zeichenketten: Funktionen lassen
+ * sich nicht vom Server an Client-Komponenten übergeben.
+ */
+export function fill(
+  template: string,
+  vars: Record<string, string | number> = {},
+): string {
+  return template.replace(/\{(\w+)\}/g, (whole, key: string) =>
+    key in vars ? String(vars[key]) : whole,
+  );
+}
+
+/** Wählt aus "Einzahl|Mehrzahl" die passende Form und füllt die Platzhalter. */
+export function plural(
+  template: string,
+  n: number,
+  vars: Record<string, string | number> = {},
+): string {
+  const [one, many = one] = template.split("|");
+  return fill(n === 1 ? one : many, { n, ...vars });
+}
+
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
 }
@@ -62,7 +88,7 @@ const de = {
     deleting: "Wird gelöscht …",
     irreversible:
       "Diese Aktion kann nicht rückgängig gemacht werden. Die Daten sind anschliessend endgültig verloren.",
-    confirmType: (word: string) => `Tippe zur Bestätigung ${word} ein:`,
+    confirmType: "Tippe zur Bestätigung {word} ein:",
     deleteFinally: "Endgültig löschen",
   },
 
@@ -81,9 +107,9 @@ const de = {
     title: "Dashboard",
     newProperty: "Objekt anlegen",
     overview: "Objektübersicht",
-    countProperties: (n: number) => `${n} ${n === 1 ? "Objekt" : "Objekte"}`,
-    inLocations: (n: number) => ` in ${n} Standorten`,
-    hiddenCount: (n: number) => ` · ${n} ausgeblendet`,
+    countProperties: "{n} Objekt|{n} Objekte",
+    inLocations: " in {n} Standorten",
+    hiddenCount: " · {n} ausgeblendet",
     dueSoFar: "Fällig bisher",
     received: "Erhalten",
     credits: "Gutschriften",
@@ -91,32 +117,30 @@ const de = {
     property: "Objekt",
     remaining: "Restlaufzeit",
     contractEnd: "Vertragsende",
-    months: (n: number) => `${n} Mon.`,
+    months: "{n} Mon.",
     total: "Gesamt",
-    sumOf: (location: string) => `Summe ${location}`,
-    plusHidden: (n: number) =>
-      `zzgl. ${n} ausgeblendete${n === 1 ? "s Objekt" : " Objekte"}`,
+    sumOf: "Summe {location}",
+    plusHidden: "zzgl. {n} ausgeblendetes Objekt|zzgl. {n} ausgeblendete Objekte",
     allProperties: "Alle Objekte",
     addPayment: "+ Zahlung",
     archived: "Archiviert",
     expired: "Abgelaufen",
     missingRate: "Miete fehlt",
-    creditSuffix: (amount: string) => `+ ${amount} Gutschrift`,
+    creditSuffix: "+ {amount} Gutschrift",
     emptyTitle: "Noch keine Objekte angelegt",
     emptyNoActive: "Keine aktiven Objekte",
     emptyHint: "Lege dein erstes Objekt an.",
     emptyArchivedHint: "Alle Objekte sind archiviert oder ihre Verträge sind abgelaufen.",
     showArchive: "Archiv einblenden",
     hideArchive: "Archiv ausblenden",
-    hiddenToggle: (n: number) =>
-      `${n} ${n === 1 ? "Objekt" : "Objekte"} ausgeblendet — einblenden`,
+    hiddenToggle: "{n} Objekt ausgeblendet — einblenden|{n} Objekte ausgeblendet — einblenden",
     noLocation: "Ohne Standort",
   },
 
   property: {
     backToDashboard: "← Zum Dashboard",
     noLocation: "Kein Standort",
-    tenantPrefix: (name: string) => ` · Mieter: ${name}`,
+    tenantPrefix: " · Mieter: {name}",
     recordPayment: "Zahlung erfassen",
     archive: "Archivieren",
     unarchive: "Aus Archiv holen",
@@ -136,9 +160,9 @@ const de = {
     start: "Mietbeginn",
     end: "Vertragsende",
     remaining: "Restlaufzeit",
-    remainingMonths: (n: number) => `${n} Monate`,
+    remainingMonths: "{n} Monate",
     termTotal: "Laufzeit gesamt",
-    termMonths: (n: number) => `${n} Monate`,
+    termMonths: "{n} Monate",
     frequency: "Zahlungsrhythmus",
     volume: "Vertragsvolumen",
     notes: "Notizen",
@@ -152,8 +176,8 @@ const de = {
     validTo: "Gültig bis",
     openEnd: "Leer lassen für offenes Ende.",
     open: "(offen)",
-    fromTo: (from: string, to: string) => `ab ${from} bis ${to}`,
-    fromOpen: (from: string) => `ab ${from} (offen)`,
+    fromTo: "ab {from} bis {to}",
+    fromOpen: "ab {from} (offen)",
     addPeriod: "Zeitraum hinzufügen",
 
     paymentsTitle: "Zahlungseingänge",
@@ -165,13 +189,14 @@ const de = {
     future: "Künftig",
     noRateSet: "keine Miete hinterlegt",
     allYears: "Alle",
-    entries: (n: number) => `${n} ${n === 1 ? "Eintrag" : "Einträge"}`,
-    receivedIn: (year: string) => (year === "alle" ? " insgesamt" : ` im Jahr ${year}`),
+    entries: "{n} Eintrag|{n} Einträge",
+    receivedTotal: " insgesamt",
+    receivedInYear: " im Jahr {year}",
     dueLabel: "Fällig",
     receivedLabel: "Erhalten",
     noPaymentsInPeriod: "Keine Zahlungen in diesem Zeitraum erfasst.",
     noDueInPeriod: "Für diesen Zeitraum sind keine Raten fällig.",
-    pageOf: (page: number, total: number) => `Seite ${page} von ${total}`,
+    pageOf: "Seite {page} von {total}",
     prev: "← Zurück",
     next: "Weiter →",
     withoutSource: "Ohne Angabe",
@@ -192,21 +217,20 @@ const de = {
 
     historyTitle: "Vertragshistorie",
     historyHint: "Änderungen an Mietbeginn und Laufzeit.",
-    historyStart: (from: string) => `Beginn ${from} → `,
-    historyTerm: (from: number) => `Laufzeit ${from} → `,
+    historyStart: "Beginn {from} → ",
+    historyTerm: "Laufzeit {from} → ",
 
     deleteTitle: "Objekt löschen",
     deleteHint:
       "Entfernt das Objekt samt Mietstaffel, Zahlungen und Gutschriften unwiderruflich. Zum reinen Ausblenden bitte archivieren.",
-    deleteQuestion: (name: string) => `${name} löschen?`,
-    deleteDetail: (payments: number, credits: number) =>
-      `Das Objekt wird mit ${payments} Zahlungen, ${credits} Gutschriften, der kompletten Mietstaffel und allen Dokumenten entfernt.`,
+    deleteQuestion: "{name} löschen?",
+    deleteDetail: "Das Objekt wird mit {payments} Zahlungen, {credits} Gutschriften, der kompletten Mietstaffel und allen Dokumenten entfernt.",
   },
 
   form: {
     masterData: "Stammdaten",
     newProperty: "Objekt anlegen",
-    editSuffix: (name: string) => `${name} bearbeiten`,
+    editSuffix: "{name} bearbeiten",
     masterHintNew: "Mietbeginn und Laufzeit bestimmen, wann welche Rate fällig wird.",
     masterHintEdit:
       "Änderungen an Mietbeginn oder Laufzeit werden in der Vertragshistorie festgehalten.",
@@ -237,22 +261,22 @@ const de = {
     allYears: "Alle Jahre",
     allYearsHint: "Tatsächlich eingegangene Mieten auf Objekten mit TA24-Kennzeichen.",
     exportAll: "Alle Jahre als CSV",
-    exportYear: (year: number) => `${year} als CSV`,
+    exportYear: "{year} als CSV",
     year: "Jahr",
     payments: "Zahlungen",
     received: "Erhalten",
-    receivedIn: (year: number) => `Erhalten ${year}`,
-    breakdown: (year: number) => `Aufschlüsselung ${year}`,
+    receivedIn: "Erhalten {year}",
+    breakdown: "Aufschlüsselung {year}",
     total: "Gesamt",
-    sumOf: (year: number) => `Summe ${year}`,
+    sumOf: "Summe {year}",
     property: "Objekt",
     location: "Standort",
     archived: "Archiviert",
     emptyTitle: "Keine Zahlungen auf TA24-Objekten",
     emptyHint:
       "Sobald für ein Objekt mit TA24-Kennzeichen Zahlungen erfasst sind, erscheinen sie hier.",
-    countProperties: (n: number) => `${n} ${n === 1 ? "Objekt" : "Objekte"}`,
-    countPayments: (n: number) => `${n} ${n === 1 ? "Zahlung" : "Zahlungen"}`,
+    countProperties: "{n} Objekt|{n} Objekte",
+    countPayments: "{n} Zahlung|{n} Zahlungen",
   },
 
   users: {
@@ -260,7 +284,7 @@ const de = {
     intro:
       "Administratoren verwalten alles, Bearbeiter pflegen Objekte, Zahlungen und Stammdaten, Leser haben nur Einsicht.",
     accounts: "Konten",
-    count: (n: number) => `${n} Benutzer`,
+    count: "{n} Benutzer",
     name: "Name",
     email: "E-Mail",
     role: "Rolle",
@@ -276,8 +300,7 @@ const de = {
     minChars: "Mindestens 8 Zeichen.",
     create: "Benutzer anlegen",
     deleteTitle: "Benutzerkonto löschen?",
-    deleteDetail: (name: string) =>
-      `${name} verliert den Zugang. Erfasste Zahlungen bleiben erhalten.`,
+    deleteDetail: "{name} verliert den Zugang. Erfasste Zahlungen bleiben erhalten.",
   },
 
   settings: {
@@ -302,16 +325,16 @@ const de = {
     newLocation: "Neuer Standort",
     locationPlaceholder: "z. B. Österreich",
     deleteLocation: "Standort löschen?",
-    deleteLocationDetail: (name: string) =>
-      `„${name}" steht künftig nicht mehr zur Auswahl. Objekte mit diesem Standort behalten alle Daten und erscheinen dann unter „Ohne Standort".`,
+    deleteLocationDetail:
+      '„{name}" steht künftig nicht mehr zur Auswahl. Objekte mit diesem Standort behalten alle Daten und erscheinen dann unter „Ohne Standort".',
 
     sources: "Zahlungsquellen",
     sourcesHint: "Auswahlmöglichkeiten beim Erfassen eines Zahlungseingangs.",
     newSource: "Neue Zahlungsquelle",
     sourcePlaceholder: "z. B. Überweisung Malta",
     deleteSource: "Zahlungsquelle löschen?",
-    deleteSourceDetail: (name: string) =>
-      `„${name}" steht künftig nicht mehr zur Auswahl. Bereits erfasste Zahlungen behalten ihren Betrag, verlieren aber die Quellenangabe.`,
+    deleteSourceDetail:
+      '„{name}" steht künftig nicht mehr zur Auswahl. Bereits erfasste Zahlungen behalten ihren Betrag, verlieren aber die Quellenangabe.',
   },
 
   actions: {
@@ -341,18 +364,18 @@ const de = {
     needLabel: "Bitte eine Bezeichnung angeben.",
     sourceExists: "Diese Zahlungsquelle existiert bereits.",
     locationExists: "Diesen Standort gibt es bereits.",
-    added: (name: string) => `„${name}" wurde hinzugefügt.`,
+    added: '„{name}" wurde hinzugefügt.',
     needNameEmail: "Bitte Name und E-Mail-Adresse angeben.",
     basePasswordTooShort: "Das Basispasswort muss mindestens 8 Zeichen lang sein.",
     badRole: "Ungültige Rolle.",
     emailExists: "Für diese E-Mail-Adresse besteht bereits ein Konto.",
-    userCreated: (name: string) => `${name} wurde angelegt.`,
+    userCreated: "{name} wurde angelegt.",
     passwordReset: "Passwort wurde neu gesetzt.",
   },
 
   documents: {
     deleteTitle: "Dokument löschen?",
-    deleteDetail: (name: string) => `„${name}" wird aus dem Speicher entfernt.`,
+    deleteDetail: '„{name}" wird aus dem Speicher entfernt.',
   },
 };
 
@@ -403,7 +426,7 @@ const en: Dict = {
     deleting: "Deleting …",
     irreversible:
       "This cannot be undone. The data will be permanently lost.",
-    confirmType: (word: string) => `Type ${word} to confirm:`,
+    confirmType: "Type {word} to confirm:",
     deleteFinally: "Delete permanently",
   },
 
@@ -421,9 +444,9 @@ const en: Dict = {
     title: "Dashboard",
     newProperty: "Add property",
     overview: "Properties",
-    countProperties: (n: number) => `${n} ${n === 1 ? "property" : "properties"}`,
-    inLocations: (n: number) => ` across ${n} locations`,
-    hiddenCount: (n: number) => ` · ${n} hidden`,
+    countProperties: "{n} property|{n} properties",
+    inLocations: " across {n} locations",
+    hiddenCount: " · {n} hidden",
     dueSoFar: "Due to date",
     received: "Received",
     credits: "Credits",
@@ -431,32 +454,30 @@ const en: Dict = {
     property: "Property",
     remaining: "Remaining",
     contractEnd: "Contract ends",
-    months: (n: number) => `${n} mo.`,
+    months: "{n} mo.",
     total: "Total",
-    sumOf: (location: string) => `Subtotal ${location}`,
-    plusHidden: (n: number) =>
-      `plus ${n} hidden ${n === 1 ? "property" : "properties"}`,
+    sumOf: "Subtotal {location}",
+    plusHidden: "plus {n} hidden property|plus {n} hidden properties",
     allProperties: "All properties",
     addPayment: "+ Payment",
     archived: "Archived",
     expired: "Expired",
     missingRate: "No rent set",
-    creditSuffix: (amount: string) => `+ ${amount} credit`,
+    creditSuffix: "+ {amount} credit",
     emptyTitle: "No properties yet",
     emptyNoActive: "No active properties",
     emptyHint: "Add your first property.",
     emptyArchivedHint: "All properties are archived or their contracts have ended.",
     showArchive: "Show archive",
     hideArchive: "Hide archive",
-    hiddenToggle: (n: number) =>
-      `${n} ${n === 1 ? "property" : "properties"} hidden — show`,
+    hiddenToggle: "{n} property hidden — show|{n} properties hidden — show",
     noLocation: "No location",
   },
 
   property: {
     backToDashboard: "← Back to dashboard",
     noLocation: "No location",
-    tenantPrefix: (name: string) => ` · Tenant: ${name}`,
+    tenantPrefix: " · Tenant: {name}",
     recordPayment: "Record payment",
     archive: "Archive",
     unarchive: "Restore from archive",
@@ -476,9 +497,9 @@ const en: Dict = {
     start: "Start of tenancy",
     end: "Contract ends",
     remaining: "Remaining",
-    remainingMonths: (n: number) => `${n} months`,
+    remainingMonths: "{n} months",
     termTotal: "Total term",
-    termMonths: (n: number) => `${n} months`,
+    termMonths: "{n} months",
     frequency: "Payment frequency",
     volume: "Contract value",
     notes: "Notes",
@@ -492,8 +513,8 @@ const en: Dict = {
     validTo: "Valid until",
     openEnd: "Leave empty for an open end.",
     open: "(open)",
-    fromTo: (from: string, to: string) => `from ${from} to ${to}`,
-    fromOpen: (from: string) => `from ${from} (open)`,
+    fromTo: "from {from} to {to}",
+    fromOpen: "from {from} (open)",
     addPeriod: "Add period",
 
     paymentsTitle: "Payments received",
@@ -505,13 +526,14 @@ const en: Dict = {
     future: "Upcoming",
     noRateSet: "no rent set",
     allYears: "All",
-    entries: (n: number) => `${n} ${n === 1 ? "entry" : "entries"}`,
-    receivedIn: (year: string) => (year === "alle" ? " in total" : ` in ${year}`),
+    entries: "{n} entry|{n} entries",
+    receivedTotal: " in total",
+    receivedInYear: " in {year}",
     dueLabel: "Due",
     receivedLabel: "Received",
     noPaymentsInPeriod: "No payments recorded for this period.",
     noDueInPeriod: "No instalments fall due in this period.",
-    pageOf: (page: number, total: number) => `Page ${page} of ${total}`,
+    pageOf: "Page {page} of {total}",
     prev: "← Previous",
     next: "Next →",
     withoutSource: "Not specified",
@@ -532,21 +554,20 @@ const en: Dict = {
 
     historyTitle: "Contract history",
     historyHint: "Changes to start date and term.",
-    historyStart: (from: string) => `Start ${from} → `,
-    historyTerm: (from: number) => `Term ${from} → `,
+    historyStart: "Start {from} → ",
+    historyTerm: "Term {from} → ",
 
     deleteTitle: "Delete property",
     deleteHint:
       "Permanently removes the property together with its rent schedule, payments and credits. To merely hide it, archive it instead.",
-    deleteQuestion: (name: string) => `Delete ${name}?`,
-    deleteDetail: (payments: number, credits: number) =>
-      `The property will be removed along with ${payments} payments, ${credits} credits, the entire rent schedule and all documents.`,
+    deleteQuestion: "Delete {name}?",
+    deleteDetail: "The property will be removed along with {payments} payments, {credits} credits, the entire rent schedule and all documents.",
   },
 
   form: {
     masterData: "Details",
     newProperty: "Add property",
-    editSuffix: (name: string) => `Edit ${name}`,
+    editSuffix: "Edit {name}",
     masterHintNew:
       "Start date and term determine when each instalment falls due.",
     masterHintEdit:
@@ -577,22 +598,22 @@ const en: Dict = {
     allYears: "All years",
     allYearsHint: "Rent actually received on properties flagged TA24.",
     exportAll: "All years as CSV",
-    exportYear: (year: number) => `${year} as CSV`,
+    exportYear: "{year} as CSV",
     year: "Year",
     payments: "Payments",
     received: "Received",
-    receivedIn: (year: number) => `Received ${year}`,
-    breakdown: (year: number) => `Breakdown ${year}`,
+    receivedIn: "Received {year}",
+    breakdown: "Breakdown {year}",
     total: "Total",
-    sumOf: (year: number) => `Total ${year}`,
+    sumOf: "Total {year}",
     property: "Property",
     location: "Location",
     archived: "Archived",
     emptyTitle: "No payments on TA24 properties",
     emptyHint:
       "Once payments are recorded for a property flagged TA24, they appear here.",
-    countProperties: (n: number) => `${n} ${n === 1 ? "property" : "properties"}`,
-    countPayments: (n: number) => `${n} ${n === 1 ? "payment" : "payments"}`,
+    countProperties: "{n} property|{n} properties",
+    countPayments: "{n} payment|{n} payments",
   },
 
   users: {
@@ -600,7 +621,7 @@ const en: Dict = {
     intro:
       "Administrators manage everything, editors maintain properties, payments and reference data, viewers have read-only access.",
     accounts: "Accounts",
-    count: (n: number) => `${n} users`,
+    count: "{n} users",
     name: "Name",
     email: "Email",
     role: "Role",
@@ -616,8 +637,7 @@ const en: Dict = {
     minChars: "At least 8 characters.",
     create: "Add user",
     deleteTitle: "Delete user account?",
-    deleteDetail: (name: string) =>
-      `${name} will lose access. Recorded payments are kept.`,
+    deleteDetail: "{name} will lose access. Recorded payments are kept.",
   },
 
   settings: {
@@ -642,16 +662,16 @@ const en: Dict = {
     newLocation: "New location",
     locationPlaceholder: "e.g. Austria",
     deleteLocation: "Delete location?",
-    deleteLocationDetail: (name: string) =>
-      `“${name}” will no longer be offered. Properties with this location keep all their data and appear under “No location”.`,
+    deleteLocationDetail:
+      "“{name}” will no longer be offered. Properties with this location keep all their data and appear under “No location”.",
 
     sources: "Payment sources",
     sourcesHint: "Choices when recording an incoming payment.",
     newSource: "New payment source",
     sourcePlaceholder: "e.g. Bank transfer Malta",
     deleteSource: "Delete payment source?",
-    deleteSourceDetail: (name: string) =>
-      `“${name}” will no longer be offered. Payments already recorded keep their amount but lose the source.`,
+    deleteSourceDetail:
+      "“{name}” will no longer be offered. Payments already recorded keep their amount but lose the source.",
   },
 
   actions: {
@@ -681,19 +701,19 @@ const en: Dict = {
     needLabel: "Please enter a name.",
     sourceExists: "This payment source already exists.",
     locationExists: "This location already exists.",
-    added: (name: string) => `“${name}” was added.`,
+    added: "“{name}” was added.",
     needNameEmail: "Please enter name and email address.",
     basePasswordTooShort:
       "The initial password must be at least 8 characters long.",
     badRole: "Invalid role.",
     emailExists: "An account already exists for this email address.",
-    userCreated: (name: string) => `${name} was created.`,
+    userCreated: "{name} was created.",
     passwordReset: "Password has been reset.",
   },
 
   documents: {
     deleteTitle: "Delete document?",
-    deleteDetail: (name: string) => `“${name}” will be removed from storage.`,
+    deleteDetail: "“{name}” will be removed from storage.",
   },
 };
 

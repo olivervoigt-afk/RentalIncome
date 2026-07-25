@@ -12,6 +12,7 @@ import { getProfile } from "@/lib/auth";
 import { formatters } from "@/lib/format";
 import { getDict } from "@/lib/i18n";
 import { getPaymentSources, getPropertyDetail } from "@/lib/queries";
+import { fill, plural } from "@/lib/i18n/dictionaries";
 
 const TABS = ["uebersicht", "zahlungen", "gutschriften", "dokumente", "historie"] as const;
 type Tab = (typeof TABS)[number];
@@ -61,7 +62,7 @@ export default async function PropertyDetailPage({
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{property.name}</h1>
           <p className="mt-1 text-sm text-muted">
             {location ?? t.property.noLocation}
-            {property.tenant_name && t.property.tenantPrefix(property.tenant_name)}
+            {property.tenant_name && fill(t.property.tenantPrefix, { name: property.tenant_name })}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {property.ta24 && <Badge tone="accent">TA24</Badge>}
@@ -173,14 +174,14 @@ export default async function PropertyDetailPage({
                 </span>
                 {entry.old_start_date !== entry.new_start_date && (
                   <span>
-                    {t.property.historyStart(f.date(entry.old_start_date!))}
+                    {fill(t.property.historyStart, { from: f.date(entry.old_start_date!) })}
                     <strong>{f.date(entry.new_start_date!)}</strong>{" "}
                   </span>
                 )}
                 {entry.old_term_months !== entry.new_term_months && (
                   <span>
-                    {t.property.historyTerm(entry.old_term_months!)}
-                    <strong>{t.property.termMonths(entry.new_term_months!)}</strong>
+                    {fill(t.property.historyTerm, { from: entry.old_term_months! })}
+                    <strong>{fill(t.property.termMonths, { n: entry.new_term_months! })}</strong>
                   </span>
                 )}
               </li>
@@ -203,8 +204,8 @@ export default async function PropertyDetailPage({
               fields={{ id: property.id }}
               trigger={t.common.deleteFinally}
               triggerClassName="rounded-md border border-negative/40 px-3.5 py-2 text-sm font-medium text-negative transition-colors hover:bg-negative/10"
-              title={t.property.deleteQuestion(property.name)}
-              description={t.property.deleteDetail(payments.length, credits.length)}
+              title={fill(t.property.deleteQuestion, { name: property.name })}
+              description={fill(t.property.deleteDetail, { payments: payments.length, credits: credits.length })}
               confirmWord={property.name}
             />
           </div>
