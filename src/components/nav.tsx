@@ -7,6 +7,49 @@ import { signOut } from "@/lib/actions/auth";
 import type { Dict, Locale } from "@/lib/i18n/dictionaries";
 import type { Profile } from "@/lib/types";
 
+/** Zahnrad aus acht Zähnen und zwei Ringen — bewusst feingliedrig gehalten. */
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-[18px]" aria-hidden="true" focusable="false">
+      {Array.from({ length: 8 }, (_, i) => (
+        <rect
+          key={i}
+          x="11.2"
+          y="1.8"
+          width="1.6"
+          height="3.6"
+          rx="0.8"
+          fill="currentColor"
+          transform={`rotate(${i * 45} 12 12)`}
+        />
+      ))}
+      <circle cx="12" cy="12" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+/** Tür mit Pfeil nach draussen. */
+function SignOutIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-[18px]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+      <path d="M10 17l-5-5 5-5" />
+      <path d="M5 12h11" />
+    </svg>
+  );
+}
+
 export default function Nav({
   profile,
   t,
@@ -18,36 +61,46 @@ export default function Nav({
 }) {
   const pathname = usePathname();
 
+  // Das Dashboard erreicht man über den Namen links, die Einstellungen über
+  // das Zahnrad — beide brauchen deshalb keinen eigenen Eintrag.
   const links = [
-    { href: "/", label: t.nav.dashboard, exact: true },
     { href: "/ta24", label: t.nav.ta24 },
     { href: "/einnahmen", label: t.nav.income },
     { href: "/benutzer", label: t.nav.users, adminOnly: true },
-    { href: "/einstellungen", label: t.nav.settings },
   ].filter((link) => !link.adminOnly || profile.role === "admin");
 
+  const onSettings = pathname.startsWith("/einstellungen");
+
+  const iconButton = (active: boolean) =>
+    `rounded-full p-2 transition-colors ${
+      active
+        ? "bg-surface-muted text-foreground"
+        : "text-muted hover:bg-surface-muted hover:text-foreground"
+    }`;
+
   return (
-    <header className="border-b border-border bg-surface">
-      <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-6">
-        <Link href="/" className="font-semibold tracking-tight">
-          {t.app.name}
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-surface/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-12 max-w-[1600px] items-center px-6">
+        <Link
+          href="/"
+          className="text-[15px] font-semibold tracking-tight transition-opacity hover:opacity-70"
+        >
+          Oylio <span className="font-normal text-muted">Rental</span>
         </Link>
 
-        <nav className="flex items-center gap-1">
+        <nav className="ml-8 flex items-center gap-6">
           {links.map((link) => {
-            const active = link.exact
-              ? pathname === link.href
-              : pathname.startsWith(link.href);
+            const active = pathname.startsWith(link.href);
 
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                className={`text-[13px] transition-colors ${
                   active
-                    ? "bg-surface-muted font-medium text-foreground"
-                    : "text-muted hover:bg-surface-muted hover:text-foreground"
+                    ? "font-medium text-foreground"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 {link.label}
@@ -56,22 +109,33 @@ export default function Nav({
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-2">
           <LocaleSwitch locale={locale} />
 
-          <div className="text-right leading-tight">
-            <p className="text-sm font-medium">
-              {profile.full_name || profile.email}
-            </p>
-            <p className="text-xs text-muted">{t.roles[profile.role]}</p>
-          </div>
+          <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+
+          <span className="hidden text-[13px] text-muted sm:inline">
+            {profile.full_name || profile.email}
+          </span>
+
+          <Link
+            href="/einstellungen"
+            title={t.nav.settings}
+            aria-label={t.nav.settings}
+            aria-current={onSettings ? "page" : undefined}
+            className={iconButton(onSettings)}
+          >
+            <GearIcon />
+          </Link>
 
           <form action={signOut}>
             <button
               type="submit"
-              className="rounded-md px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+              title={t.nav.signOut}
+              aria-label={t.nav.signOut}
+              className={iconButton(false)}
             >
-              {t.nav.signOut}
+              <SignOutIcon />
             </button>
           </form>
         </div>

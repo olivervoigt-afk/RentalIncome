@@ -1,31 +1,38 @@
 "use client";
 
-import { useRef } from "react";
+import { FlagDE, FlagUK } from "@/components/flags";
 import { setLocale } from "@/lib/actions/locale";
-import { LOCALES, type Locale } from "@/lib/i18n/dictionaries";
+import { LOCALE_LABELS, LOCALES, type Locale } from "@/lib/i18n/dictionaries";
 
-/** Umschalter DE/EN. Die Wahl wird im Konto gespeichert, nicht nur im Browser. */
+const FLAGS = { de: FlagDE, en: FlagUK } as const;
+
+/** Sprachwahl über Flaggen. Die Wahl wird im Konto gespeichert, nicht im Browser. */
 export default function LocaleSwitch({ locale }: { locale: Locale }) {
-  const formRef = useRef<HTMLFormElement>(null);
-
   return (
-    <form ref={formRef} action={setLocale} className="flex rounded-md border border-border p-0.5">
-      {LOCALES.map((code) => (
-        <button
-          key={code}
-          type="submit"
-          name="locale"
-          value={code}
-          aria-current={code === locale ? "true" : undefined}
-          className={`rounded px-2 py-1 text-xs font-medium uppercase transition-colors ${
-            code === locale
-              ? "bg-surface-muted text-foreground"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          {code}
-        </button>
-      ))}
+    <form action={setLocale} className="flex items-center gap-1">
+      {LOCALES.map((code) => {
+        const Flag = FLAGS[code];
+        const active = code === locale;
+
+        return (
+          <button
+            key={code}
+            type="submit"
+            name="locale"
+            value={code}
+            title={LOCALE_LABELS[code]}
+            aria-label={LOCALE_LABELS[code]}
+            aria-current={active ? "true" : undefined}
+            className={`rounded-[4px] p-0.5 transition-all ${
+              active
+                ? "opacity-100"
+                : "opacity-40 grayscale hover:opacity-80 hover:grayscale-0"
+            }`}
+          >
+            <Flag title={LOCALE_LABELS[code]} />
+          </button>
+        );
+      })}
     </form>
   );
 }
