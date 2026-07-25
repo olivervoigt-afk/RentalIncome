@@ -47,11 +47,20 @@ export async function GET(request: Request) {
     const rows = report.rows
       .filter((r) => (r.byYear.get(year)?.count ?? 0) > 0)
       .sort((a, b) => (b.byYear.get(year)?.sum ?? 0) - (a.byYear.get(year)?.sum ?? 0));
-    const total = report.totalsByYear.get(year) ?? { count: 0, sum: 0 };
+    const total =
+      report.totalsByYear.get(year) ?? { count: 0, sum: 0, reductions: 0, taxable: 0 };
 
     lines.push(csvRow([`${t.ta24.year} ${year}`]));
     lines.push(
-      csvRow([t.ta24.property, t.ta24.location, "Status", t.ta24.payments, `${t.ta24.received} (EUR)`]),
+      csvRow([
+        t.ta24.property,
+        t.ta24.location,
+        "Status",
+        t.ta24.payments,
+        `${t.ta24.received} (EUR)`,
+        `${t.ta24.reductions} (EUR)`,
+        `${t.ta24.taxable} (EUR)`,
+      ]),
     );
 
     for (const row of rows) {
@@ -63,25 +72,55 @@ export async function GET(request: Request) {
           row.archived ? t.ta24.archived : "",
           cell.count,
           amount(cell.sum),
+          amount(cell.reductions),
+          amount(cell.taxable),
         ]),
       );
     }
 
-    lines.push(csvRow([t.ta24.total, "", "", total.count, amount(total.sum)]));
+    lines.push(
+      csvRow([
+        t.ta24.total,
+        "",
+        "",
+        total.count,
+        amount(total.sum),
+        amount(total.reductions),
+        amount(total.taxable),
+      ]),
+    );
     lines.push("");
   }
 
   if (!single) {
     lines.push(csvRow([t.ta24.allYears]));
-    lines.push(csvRow([t.ta24.year, t.ta24.payments, `${t.ta24.received} (EUR)`]));
+    lines.push(
+      csvRow([
+        t.ta24.year,
+        t.ta24.payments,
+        `${t.ta24.received} (EUR)`,
+        `${t.ta24.reductions} (EUR)`,
+        `${t.ta24.taxable} (EUR)`,
+      ]),
+    );
     for (const year of report.years) {
       const cell = report.totalsByYear.get(year)!;
-      lines.push(csvRow([year, cell.count, amount(cell.sum)]));
+      lines.push(
+        csvRow([
+          year,
+          cell.count,
+          amount(cell.sum),
+          amount(cell.reductions),
+          amount(cell.taxable),
+        ]),
+      );
     }
     lines.push(
       csvRow([
         t.ta24.total,
         [...report.totalsByYear.values()].reduce((a, c) => a + c.count, 0),
+        amount([...report.totalsByYear.values()].reduce((a, c) => a + c.sum, 0)),
+        amount([...report.totalsByYear.values()].reduce((a, c) => a + c.reductions, 0)),
         amount(report.grandTotal),
       ]),
     );

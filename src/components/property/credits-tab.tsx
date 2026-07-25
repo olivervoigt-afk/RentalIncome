@@ -1,6 +1,6 @@
 import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
-import { Card, CardHeader, Field, Input } from "@/components/ui";
+import { Badge, Card, CardHeader, Field, Input } from "@/components/ui";
 import { addCredit, deleteCredit } from "@/lib/actions/properties";
 import type { Formatters } from "@/lib/format";
 import type { Dict } from "@/lib/i18n/dictionaries";
@@ -50,6 +50,20 @@ export default function CreditsTab({
                   <Input name="reason" placeholder="z. B. Sanitär-Reparatur" />
                 </Field>
               </div>
+
+              <label className="flex items-start gap-2.5 text-sm">
+                <input
+                  type="checkbox"
+                  name="reduces_ta24"
+                  className="mt-0.5 size-4 rounded border-border accent-accent"
+                />
+                <span>
+                  <span className="font-medium">{t.property.reducesTa24}</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    {t.property.reducesTa24Hint}
+                  </span>
+                </span>
+              </label>
             </InlineForm>
           </div>
         </Card>
@@ -88,7 +102,14 @@ export default function CreditsTab({
                     <td className="tabular px-5 py-3 text-right font-medium">
                       {f.euro(Number(credit.amount))}
                     </td>
-                    <td className="px-5 py-3 text-muted">{credit.reason || t.common.none}</td>
+                    <td className="px-5 py-3 text-muted">
+                      {credit.reason || t.common.none}
+                      {credit.reduces_ta24 && (
+                        <span className="ml-2">
+                          <Badge tone="accent">{t.property.reducesTa24Badge}</Badge>
+                        </span>
+                      )}
+                    </td>
                     {canEdit && (
                       <td className="px-5 py-3 text-right">
                         <DangerAction

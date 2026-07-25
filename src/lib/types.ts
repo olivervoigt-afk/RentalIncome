@@ -88,6 +88,8 @@ export type Credit = {
   credited_on: string;
   amount: number;
   reason: string;
+  /** Mindert die steuerpflichtige Einnahme in der TA24-Auswertung. */
+  reduces_ta24: boolean;
   created_at: string;
   created_by: string | null;
 };

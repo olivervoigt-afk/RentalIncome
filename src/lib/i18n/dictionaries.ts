@@ -206,6 +206,10 @@ const de = {
     creditsHint:
       "Beträge, die dem Mieter angerechnet werden, z. B. selbst bezahlte Handwerker.",
     recordCredit: "Gutschrift erfassen",
+    reducesTa24: "Mindert die steuerpflichtige Einnahme (TA24)",
+    reducesTa24Hint:
+      "Nur ankreuzen, wenn bereits erhaltene Miete erstattet wurde. Eine von vornherein erlassene Miete taucht ohnehin nicht als Einnahme auf.",
+    reducesTa24Badge: "TA24-mindernd",
     noCredits: "Keine Gutschriften erfasst.",
 
     documentsTitle: "Dokumente",
@@ -266,6 +270,8 @@ const de = {
     payments: "Zahlungen",
     received: "Erhalten",
     receivedIn: "Erhalten {year}",
+    reductions: "Minderungen",
+    taxable: "Steuerpflichtig",
     breakdown: "Aufschlüsselung {year}",
     total: "Gesamt",
     sumOf: "Summe {year}",
@@ -543,6 +549,10 @@ const en: Dict = {
     creditsHint:
       "Amounts credited to the tenant, e.g. repairs they paid for themselves.",
     recordCredit: "Record credit",
+    reducesTa24: "Reduces taxable income (TA24)",
+    reducesTa24Hint:
+      "Only tick this if rent already received was refunded. Rent waived from the outset never appears as income anyway.",
+    reducesTa24Badge: "Reduces TA24",
     noCredits: "No credits recorded.",
 
     documentsTitle: "Documents",
@@ -603,6 +613,8 @@ const en: Dict = {
     payments: "Payments",
     received: "Received",
     receivedIn: "Received {year}",
+    reductions: "Reductions",
+    taxable: "Taxable",
     breakdown: "Breakdown {year}",
     total: "Total",
     sumOf: "Total {year}",

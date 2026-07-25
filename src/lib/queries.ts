@@ -157,17 +157,29 @@ export type Ta24Row = {
   name: string;
   location: string | null;
   archived: boolean;
-  /** Zahlungseingänge je Kalenderjahr: Anzahl und Summe. */
-  byYear: Map<number, { count: number; sum: number }>;
+  /** Je Kalenderjahr: Anzahl und Summe der Eingänge sowie steuerliche Minderungen. */
+  byYear: Map<number, Ta24Cell>;
   total: number;
+};
+
+export type Ta24Cell = {
+  count: number;
+  /** Tatsächlich eingegangene Zahlungen. */
+  sum: number;
+  /** Gutschriften, die als steuermindernd gekennzeichnet sind. */
+  reductions: number;
+  /** sum − reductions. */
+  taxable: number;
 };
 
 export type Ta24Report = {
   years: number[];
   rows: Ta24Row[];
   /** Summe aller Objekte je Jahr. */
-  totalsByYear: Map<number, { count: number; sum: number }>;
+  totalsByYear: Map<number, Ta24Cell>;
   grandTotal: number;
+  /** true, sobald irgendwo eine steuermindernde Gutschrift vorliegt. */
+  hasReductions: boolean;
 };
 
 /**
@@ -176,15 +188,19 @@ export type Ta24Report = {
  * Maßgeblich ist das **Zahlungsdatum**, nicht die Fälligkeit: eine im Januar
  * eingegangene Dezembermiete zählt ins Januar-Jahr (Ist-Prinzip). Archivierte
  * Objekte bleiben enthalten, da ihre Zahlungen zu vergangenen Jahren gehören.
- * Gutschriften fließen bewusst nicht ein — es sind keine Geldeingänge.
+ *
+ * Gutschriften zählen nur, wenn sie ausdrücklich als steuermindernd
+ * gekennzeichnet sind — etwa bei einer Erstattung bereits erhaltener Miete.
+ * Eine von vornherein erlassene Miete erscheint ohnehin nicht als Eingang.
  */
 export async function getTa24Report(): Promise<Ta24Report> {
   const supabase = await createClient();
 
-  const [propertiesResult, locationsResult, payments] = await Promise.all([
+  const [propertiesResult, locationsResult, payments, credits] = await Promise.all([
     supabase.from("properties").select("*").eq("ta24", true).order("name"),
     supabase.from("locations").select("*"),
     fetchAll<Payment>(supabase, "payments"),
+    fetchAll<Credit>(supabase, "credits"),
   ]);
 
   if (propertiesResult.error) throw propertiesResult.error;
@@ -204,12 +220,26 @@ export async function getTa24Report(): Promise<Ta24Report> {
     ]);
   }
 
+  const creditsByProperty = new Map<string, Credit[]>();
+  let hasReductions = false;
+
+  for (const credit of credits) {
+    if (!relevant.has(credit.property_id) || !credit.reduces_ta24) continue;
+    hasReductions = true;
+    creditsByProperty.set(credit.property_id, [
+      ...(creditsByProperty.get(credit.property_id) ?? []),
+      credit,
+    ]);
+  }
+
+  const emptyCell = (): Ta24Cell => ({ count: 0, sum: 0, reductions: 0, taxable: 0 });
+
   const years = new Set<number>();
-  const totalsByYear = new Map<number, { count: number; sum: number }>();
+  const totalsByYear = new Map<number, Ta24Cell>();
   let grandTotal = 0;
 
   const rows: Ta24Row[] = properties.map((property) => {
-    const byYear = new Map<number, { count: number; sum: number }>();
+    const byYear = new Map<number, Ta24Cell>();
     let total = 0;
 
     for (const payment of byProperty.get(property.id) ?? []) {
@@ -217,18 +247,39 @@ export async function getTa24Report(): Promise<Ta24Report> {
       const amount = Number(payment.amount);
 
       years.add(year);
-      total += amount;
-      grandTotal += amount;
 
-      const cell = byYear.get(year) ?? { count: 0, sum: 0 };
-      byYear.set(year, { count: cell.count + 1, sum: cell.sum + amount });
+      const cell = byYear.get(year) ?? emptyCell();
+      cell.count += 1;
+      cell.sum += amount;
+      byYear.set(year, cell);
 
-      const overall = totalsByYear.get(year) ?? { count: 0, sum: 0 };
-      totalsByYear.set(year, {
-        count: overall.count + 1,
-        sum: overall.sum + amount,
-      });
+      const overall = totalsByYear.get(year) ?? emptyCell();
+      overall.count += 1;
+      overall.sum += amount;
+      totalsByYear.set(year, overall);
     }
+
+    // Steuermindernde Gutschriften im Jahr ihrer Erfassung abziehen.
+    for (const credit of creditsByProperty.get(property.id) ?? []) {
+      const year = Number(credit.credited_on.slice(0, 4));
+      const amount = Number(credit.amount);
+
+      years.add(year);
+
+      const cell = byYear.get(year) ?? emptyCell();
+      cell.reductions += amount;
+      byYear.set(year, cell);
+
+      const overall = totalsByYear.get(year) ?? emptyCell();
+      overall.reductions += amount;
+      totalsByYear.set(year, overall);
+    }
+
+    for (const cell of byYear.values()) {
+      cell.taxable = cell.sum - cell.reductions;
+      total += cell.taxable;
+    }
+    grandTotal += total;
 
     return {
       propertyId: property.id,
@@ -242,11 +293,16 @@ export async function getTa24Report(): Promise<Ta24Report> {
     };
   });
 
+  for (const cell of totalsByYear.values()) {
+    cell.taxable = cell.sum - cell.reductions;
+  }
+
   return {
     years: [...years].sort((a, b) => b - a),
     rows,
     totalsByYear,
     grandTotal,
+    hasReductions,
   };
 }
 

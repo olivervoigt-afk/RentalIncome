@@ -40,7 +40,9 @@ export default async function Ta24Page({
     .filter((r) => (r.byYear.get(selected)?.count ?? 0) > 0)
     .sort((a, b) => (b.byYear.get(selected)?.sum ?? 0) - (a.byYear.get(selected)?.sum ?? 0));
 
-  const yearTotal = report.totalsByYear.get(selected) ?? { count: 0, sum: 0 };
+  const yearTotal =
+    report.totalsByYear.get(selected) ??
+    { count: 0, sum: 0, reductions: 0, taxable: 0 };
 
   return (
     <div className="space-y-6">
@@ -64,6 +66,12 @@ export default async function Ta24Page({
                 <th className="px-5 py-3 font-medium">{t.ta24.year}</th>
                 <th className="px-5 py-3 text-right font-medium">{t.ta24.payments}</th>
                 <th className="px-5 py-3 text-right font-medium">{t.ta24.received}</th>
+                {report.hasReductions && (
+                  <>
+                    <th className="px-5 py-3 text-right font-medium">{t.ta24.reductions}</th>
+                    <th className="px-5 py-3 text-right font-medium">{t.ta24.taxable}</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -91,9 +99,17 @@ export default async function Ta24Page({
                     <td className="tabular px-5 py-3 text-right text-muted">
                       {cell.count}
                     </td>
-                    <td className="tabular px-5 py-3 text-right font-medium">
-                      {f.euro(cell.sum)}
-                    </td>
+                    <td className="tabular px-5 py-3 text-right">{f.euro(cell.sum)}</td>
+                    {report.hasReductions && (
+                      <>
+                        <td className="tabular px-5 py-3 text-right text-muted">
+                          {cell.reductions ? `− ${f.euro(cell.reductions)}` : t.common.none}
+                        </td>
+                        <td className="tabular px-5 py-3 text-right font-medium">
+                          {f.euro(cell.taxable)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 );
               })}
@@ -105,8 +121,20 @@ export default async function Ta24Page({
                   {[...report.totalsByYear.values()].reduce((a, c) => a + c.count, 0)}
                 </td>
                 <td className="tabular px-5 py-3 text-right">
-                  {f.euro(report.grandTotal)}
+                  {f.euro(
+                    [...report.totalsByYear.values()].reduce((a, c) => a + c.sum, 0),
+                  )}
                 </td>
+                {report.hasReductions && (
+                  <>
+                    <td className="tabular px-5 py-3 text-right text-muted">
+                      {`− ${f.euro([...report.totalsByYear.values()].reduce((a, c) => a + c.reductions, 0))}`}
+                    </td>
+                    <td className="tabular px-5 py-3 text-right">
+                      {f.euro(report.grandTotal)}
+                    </td>
+                  </>
+                )}
               </tr>
             </tfoot>
           </table>
@@ -155,6 +183,12 @@ export default async function Ta24Page({
                 <th className="px-5 py-3 font-medium">{t.ta24.location}</th>
                 <th className="px-5 py-3 text-right font-medium">{t.ta24.payments}</th>
                 <th className="px-5 py-3 text-right font-medium">{fill(t.ta24.receivedIn, { year: selected })}</th>
+                {report.hasReductions && (
+                  <>
+                    <th className="px-5 py-3 text-right font-medium">{t.ta24.reductions}</th>
+                    <th className="px-5 py-3 text-right font-medium">{t.ta24.taxable}</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -178,9 +212,17 @@ export default async function Ta24Page({
                     </td>
                     <td className="px-5 py-3 text-muted">{row.location ?? t.common.none}</td>
                     <td className="tabular px-5 py-3 text-right text-muted">{cell.count}</td>
-                    <td className="tabular px-5 py-3 text-right font-medium">
-                      {f.euro(cell.sum)}
-                    </td>
+                    <td className="tabular px-5 py-3 text-right">{f.euro(cell.sum)}</td>
+                    {report.hasReductions && (
+                      <>
+                        <td className="tabular px-5 py-3 text-right text-muted">
+                          {cell.reductions ? `− ${f.euro(cell.reductions)}` : t.common.none}
+                        </td>
+                        <td className="tabular px-5 py-3 text-right font-medium">
+                          {f.euro(cell.taxable)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 );
               })}
@@ -193,9 +235,17 @@ export default async function Ta24Page({
                 <td className="tabular px-5 py-3 text-right text-muted">
                   {yearTotal.count}
                 </td>
-                <td className="tabular px-5 py-3 text-right text-lg">
-                  {f.euro(yearTotal.sum)}
-                </td>
+                <td className="tabular px-5 py-3 text-right">{f.euro(yearTotal.sum)}</td>
+                {report.hasReductions && (
+                  <>
+                    <td className="tabular px-5 py-3 text-right text-muted">
+                      {`− ${f.euro(yearTotal.reductions)}`}
+                    </td>
+                    <td className="tabular px-5 py-3 text-right text-lg">
+                      {f.euro(yearTotal.taxable)}
+                    </td>
+                  </>
+                )}
               </tr>
             </tfoot>
           </table>

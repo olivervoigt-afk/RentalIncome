@@ -282,6 +282,7 @@ export async function addCredit(
     credited_on,
     amount,
     reason: text(formData, "reason"),
+    reduces_ta24: formData.get("reduces_ta24") === "on",
     created_by: profile.id,
   });
 
