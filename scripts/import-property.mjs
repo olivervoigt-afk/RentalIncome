@@ -20,6 +20,7 @@ for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8
 const args = process.argv.slice(2);
 const file = args[0];
 const replace = args.includes("--ersetzen");
+const noBalancing = args.includes("--kein-ausgleich");
 const nameIdx = args.indexOf("--name");
 const overrideName = nameIdx >= 0 ? args[nameIdx + 1] : null;
 
@@ -29,7 +30,9 @@ if (!file) {
 }
 
 const data = JSON.parse(readFileSync(file, "utf8"));
-const name = overrideName ?? data.sheet;
+// Der Name aus dem Übersichtsblatt ist vollständig; Blattnamen sind im
+// xlsx-Export auf 31 Zeichen gekürzt.
+const name = overrideName ?? data.import_name ?? data.sheet;
 
 const FREQ = { 1: "monthly", 3: "quarterly", 6: "semiannual", 12: "yearly" };
 const frequency = FREQ[data.months_per_period];
@@ -72,6 +75,7 @@ const { data: property, error } = await supabase
     term_months: data.term_months,
     payment_frequency: frequency,
     ta24: Boolean(data.ta24),
+    archived: Boolean(data.archived),
     notes: `Übernommen aus der Google-Tabelle „rental income Malta", Blatt „${data.sheet}".`,
   })
   .select("id")
@@ -142,19 +146,27 @@ const sum = rows.reduce((a, r) => a + r.amount, 0);
  * bisherigen Stand entspricht, wird die Differenz als Gutschrift erfasst.
  * Die Fälligkeiten werden dafür exakt so berechnet wie in der Anwendung.
  */
+// Muss der Datumsbehandlung in src/lib/rent.ts entsprechen: lokale
+// Mitternacht, nicht UTC — sonst rutschen Raten über Sommerzeitwechsel
+// auf die falsche Staffelstufe.
+const localDate = (iso) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
 const rateAt = (date) => {
   let best = null;
   for (const p of periods) {
-    const from = new Date(`${p.valid_from}T12:00:00Z`);
+    const from = localDate(p.valid_from);
     if (date < from) continue;
-    if (p.valid_to && date > new Date(`${p.valid_to}T12:00:00Z`)) continue;
-    if (!best || from > new Date(`${best.valid_from}T12:00:00Z`)) best = p;
+    if (p.valid_to && date > localDate(p.valid_to)) continue;
+    if (!best || from > localDate(best.valid_from)) best = p;
   }
   return best ? best.amount : 0;
 };
 
 const step = data.months_per_period;
-const start = new Date(`${data.start_date}T12:00:00Z`);
+const start = localDate(data.start_date);
 const end = addMonths(start, data.term_months);
 const today = new Date();
 
@@ -169,7 +181,7 @@ const computedBalance = round2(sum - dueToDate);
 const targetBalance = data.overview?.balance ?? null;
 let credit = null;
 
-if (targetBalance !== null && Math.abs(targetBalance - computedBalance) >= 0.01) {
+if (!noBalancing && targetBalance !== null && Math.abs(targetBalance - computedBalance) >= 0.01) {
   credit = round2(targetBalance - computedBalance);
   const { error: creditError } = await supabase.from("credits").insert({
     property_id: property.id,

@@ -8,7 +8,6 @@ import { ROLE_LABELS, type Profile } from "@/lib/types";
 const LINKS = [
   { href: "/", label: "Dashboard", exact: true },
   { href: "/objekte", label: "Objekte" },
-  { href: "/import", label: "Import", editorOnly: true },
   { href: "/benutzer", label: "Benutzer", adminOnly: true },
   { href: "/einstellungen", label: "Einstellungen" },
 ];
@@ -18,7 +17,6 @@ export default function Nav({ profile }: { profile: Profile }) {
 
   const visible = LINKS.filter((link) => {
     if (link.adminOnly && profile.role !== "admin") return false;
-    if (link.editorOnly && profile.role === "viewer") return false;
     return true;
   });
 

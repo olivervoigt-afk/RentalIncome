@@ -4,10 +4,53 @@ Kontrollsummen, die im Blatt selbst stehen.
     python3 extract.py "Zorneding"
 """
 import json
+import re
 import sys
+from datetime import date
 from xlsx import Workbook, serial_to_date
 
 FILLER_YEAR = 2090  # Leere Staffelzeilen tragen Platzhalterdaten weit in der Zukunft.
+
+
+TEXT_DATE = re.compile(r"^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})$")
+
+
+DAYS_IN_MONTH = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+
+def cell_date(value):
+    """Datum aus einer Zelle: Serienzahl oder Text wie "03.04.2025".
+
+    Die Quelle enthaelt vereinzelt Tippfehler — unmoegliche Tage (31.11.) und
+    verrutschte Jahreszahlen (0205 statt 2025). Beides wird korrigiert und als
+    "issue" gemeldet, damit es in der Pruefliste auffaellt.
+    """
+    direct = serial_to_date(value)
+    if direct:
+        return direct, None
+
+    m = TEXT_DATE.match(str(value).strip())
+    if not m:
+        return None, None
+
+    day, month, year = (int(x) for x in m.groups())
+    if not 1 <= month <= 12:
+        return None, None
+
+    issue = None
+
+    if day > DAYS_IN_MONTH[month - 1]:
+        day = DAYS_IN_MONTH[month - 1]
+        issue = "tag"
+
+    if not 1990 <= year <= 2100:
+        # Jahr wird spaeter aus den umliegenden Zahlungen abgeleitet.
+        return (month, day), "jahr"
+
+    try:
+        return date(year, month, day), issue
+    except ValueError:
+        return None, None
 
 
 def num(value):
@@ -37,14 +80,28 @@ def value_right(grid, row, col):
     return None
 
 
+def normalize(text):
+    """Vergleichsform: Kleinschreibung, ohne Trennzeichen, Leerraum gestaucht.
+
+    Noetig, weil Blattnamen im xlsx-Export auf 31 Zeichen gekuerzt werden und
+    Schraegstriche dort durch Leerzeichen ersetzt sind.
+    """
+    cleaned = str(text).replace("/", " ").replace("\\", " ")
+    return " ".join(cleaned.lower().split())
+
+
 def summary_row(wb, sheet_name):
     """Zeile des Objekts im Uebersichtsblatt: TA24, Soll, Ist, Saldo."""
     grid = wb.grid(next(p for n, p in wb.sheets if n == "Summary"))
-    wanted = sheet_name.strip().lower()
+    wanted = normalize(sheet_name)
 
     for row in grid:
         label = row[1] if len(row) > 1 else ""
-        if isinstance(label, str) and label.strip().lower() == wanted:
+        if not isinstance(label, str) or not label.strip():
+            continue
+        candidate = normalize(label)
+        # Der Blattname kann eine gekuerzte Fassung des Uebersichtsnamens sein.
+        if candidate == wanted or candidate.startswith(wanted):
             def cell(i):
                 return num(row[i]) if len(row) > i else None
 
@@ -143,21 +200,45 @@ def extract(wb, sheet_name):
     if r_pay is None:
         warnings.append("Zahlungsliste nicht gefunden")
     else:
+        missing_year = []  # Positionen, deren Jahr erst noch bestimmt wird.
+
         for r in range(r_pay + 1, len(grid)):
             row = grid[r]
-            d = serial_to_date(row[c_pay] if len(row) > c_pay else "")
+            raw = row[c_pay] if len(row) > c_pay else ""
+            parsed, issue = cell_date(raw)
             a = num(row[c_pay + 1] if len(row) > c_pay + 1 else "")
-            if d is None or a is None or a == 0:
+            if parsed is None or a is None or a == 0:
                 continue
-            if d.year >= FILLER_YEAR:
+            if issue != "jahr" and parsed.year >= FILLER_YEAR:
                 continue
+
             ref = row[c_pay + 2] if len(row) > c_pay + 2 else ""
-            payments.append(
-                {
-                    "date": d.isoformat(),
-                    "amount": round(a, 2),
-                    "reference": str(ref).strip(),
-                }
+            entry = {
+                "date": None if issue == "jahr" else parsed.isoformat(),
+                "amount": round(a, 2),
+                "reference": str(ref).strip(),
+            }
+            payments.append(entry)
+
+            if issue == "jahr":
+                missing_year.append((len(payments) - 1, parsed, raw))
+            elif issue == "tag":
+                warnings.append(
+                    f'Zahlungsdatum "{raw}" gibt es nicht — als {entry["date"]} '
+                    "übernommen, bitte prüfen"
+                )
+
+        # Jahr aus der zuletzt davor stehenden lesbaren Zahlung ableiten.
+        for idx, (month, day), raw in missing_year:
+            earlier = [p["date"] for p in payments[:idx] if p["date"]]
+            later = [p["date"] for p in payments[idx + 1 :] if p["date"]]
+            reference = earlier[-1] if earlier else (later[0] if later else None)
+            year = int(reference[:4]) if reference else date.today().year
+
+            payments[idx]["date"] = f"{year:04d}-{month:02d}-{day:02d}"
+            warnings.append(
+                f'Zahlungsdatum "{raw}" ist unlesbar — als '
+                f'{payments[idx]["date"]} übernommen, bitte prüfen'
             )
 
     # --- Kontrollsummen aus dem Blatt ---
@@ -197,6 +278,21 @@ def extract(wb, sheet_name):
                 "gefunden und als eigene Staffelstufe übernommen"
             )
         escalations = plan_steps
+
+        # Bei einigen Vertraegen weicht das Feld "first payment due" vom
+        # tatsaechlichen Plan ab. Der Plan gilt, sonst liegt die erste Rate
+        # ausserhalb jeder Staffelstufe und faellt mit 0 EUR heraus.
+        plan_start = plan[0]["due"]
+        if start is None or plan_start != start:
+            if start is not None:
+                warnings.append(
+                    f"Mietbeginn laut Feld {start.isoformat()}, laut Zahlungsplan "
+                    f"{plan_start.isoformat()} — Plan übernommen"
+                )
+            start = plan_start
+
+        # Die Laufzeit bleibt beim Feld: die Planvorlage endet nach 200 Zeilen
+        # und ist bei langen Vertraegen abgeschnitten.
 
     overview = summary_row(wb, sheet_name)
     if overview is None:
