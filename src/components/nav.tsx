@@ -21,6 +21,7 @@ export default function Nav({
   const links = [
     { href: "/", label: t.nav.dashboard, exact: true },
     { href: "/ta24", label: t.nav.ta24 },
+    { href: "/einnahmen", label: t.nav.income },
     { href: "/benutzer", label: t.nav.users, adminOnly: true },
     { href: "/einstellungen", label: t.nav.settings },
   ].filter((link) => !link.adminOnly || profile.role === "admin");

@@ -334,3 +334,105 @@ export async function getProfiles(): Promise<Profile[]> {
     .order("full_name");
   return (data ?? []) as Profile[];
 }
+
+
+export type IncomeRow = {
+  propertyId: string;
+  name: string;
+  location: string | null;
+  archived: boolean;
+  tenant: string;
+  byYear: Map<number, Ta24Cell>;
+};
+
+export type IncomeReport = {
+  years: number[];
+  /** Vorkommende Standorte, "ohne" steht für Objekte ohne Zuordnung. */
+  locations: string[];
+  rows: IncomeRow[];
+  hasReductions: boolean;
+};
+
+/**
+ * Jahreseinnahmen je Standort — das Gegenstück zur TA24-Auswertung für
+ * Finanzämter ausserhalb Maltas.
+ *
+ * Wie dort gilt das Ist-Prinzip: gezählt wird, was im jeweiligen Kalenderjahr
+ * tatsächlich geflossen ist. Als steuermindernd gekennzeichnete Gutschriften
+ * werden abgezogen. Archivierte Objekte bleiben enthalten, da ihre Zahlungen
+ * zu vergangenen Jahren gehören.
+ */
+export async function getAnnualIncome(): Promise<IncomeReport> {
+  const supabase = await createClient();
+
+  const [propertiesResult, locationsResult, payments, credits] = await Promise.all([
+    supabase.from("properties").select("*").order("name"),
+    supabase.from("locations").select("*"),
+    fetchAll<Payment>(supabase, "payments"),
+    fetchAll<Credit>(supabase, "credits"),
+  ]);
+
+  if (propertiesResult.error) throw propertiesResult.error;
+
+  const properties = (propertiesResult.data ?? []) as Property[];
+  const locationName = new Map(
+    ((locationsResult.data ?? []) as Location[]).map((l) => [l.id, l.name]),
+  );
+
+  const byPayment = groupBy(payments);
+  const byCredit = groupBy(credits);
+  const years = new Set<number>();
+  const locations = new Set<string>();
+  let hasReductions = false;
+
+  const rows: IncomeRow[] = properties.map((property) => {
+    const location = property.location_id
+      ? (locationName.get(property.location_id) ?? null)
+      : null;
+    if (location) locations.add(location);
+
+    const byYear = new Map<number, Ta24Cell>();
+
+    for (const payment of byPayment.get(property.id) ?? []) {
+      const year = Number(payment.paid_on.slice(0, 4));
+      years.add(year);
+
+      const cell =
+        byYear.get(year) ?? { count: 0, sum: 0, reductions: 0, taxable: 0 };
+      cell.count += 1;
+      cell.sum += Number(payment.amount);
+      byYear.set(year, cell);
+    }
+
+    for (const credit of byCredit.get(property.id) ?? []) {
+      if (!credit.reduces_ta24) continue;
+      hasReductions = true;
+
+      const year = Number(credit.credited_on.slice(0, 4));
+      years.add(year);
+
+      const cell =
+        byYear.get(year) ?? { count: 0, sum: 0, reductions: 0, taxable: 0 };
+      cell.reductions += Number(credit.amount);
+      byYear.set(year, cell);
+    }
+
+    for (const cell of byYear.values()) cell.taxable = cell.sum - cell.reductions;
+
+    return {
+      propertyId: property.id,
+      name: property.name,
+      location,
+      archived: property.archived,
+      tenant: property.tenant_name,
+      byYear,
+    };
+  });
+
+  return {
+    years: [...years].sort((a, b) => b - a),
+    locations: [...locations].sort((a, b) => a.localeCompare(b, "de")),
+    rows,
+    hasReductions,
+  };
+}

@@ -52,6 +52,7 @@ const de = {
   nav: {
     dashboard: "Dashboard",
     ta24: "TA24",
+    income: "Jahreseinnahmen",
     users: "Benutzer",
     settings: "Einstellungen",
     signOut: "Abmelden",
@@ -285,6 +286,32 @@ const de = {
     countPayments: "{n} Zahlung|{n} Zahlungen",
   },
 
+  income: {
+    title: "Jahreseinnahmen nach Standort",
+    intro:
+      "Gezählt wird, was im jeweiligen Kalenderjahr tatsächlich geflossen ist — maßgeblich ist das Zahlungsdatum, nicht die Fälligkeit. Als steuermindernd gekennzeichnete Gutschriften werden abgezogen. Archivierte Objekte sind enthalten, da ihre Zahlungen zu vergangenen Jahren gehören.",
+    allLocations: "Alle Standorte",
+    noLocation: "Ohne Standort",
+    exportAll: "Alle Jahre als CSV",
+    exportYear: "{year} als CSV",
+    year: "Jahr",
+    property: "Objekt",
+    tenant: "Mieter",
+    payments: "Zahlungen",
+    received: "Erhalten",
+    receivedIn: "Erhalten {year}",
+    reductions: "Minderungen",
+    taxable: "Steuerpflichtig",
+    total: "Gesamt",
+    sumOf: "Summe {year}",
+    breakdown: "Aufschlüsselung {year}",
+    archived: "Archiviert",
+    emptyTitle: "Keine Zahlungen für diesen Standort",
+    emptyHint: "Sobald Zahlungen erfasst sind, erscheinen sie hier.",
+    countProperties: "{n} Objekt|{n} Objekte",
+    countPayments: "{n} Zahlung|{n} Zahlungen",
+  },
+
   users: {
     title: "Benutzer",
     intro:
@@ -396,6 +423,7 @@ const en: Dict = {
   nav: {
     dashboard: "Dashboard",
     ta24: "TA24",
+    income: "Annual income",
     users: "Users",
     settings: "Settings",
     signOut: "Sign out",
@@ -624,6 +652,32 @@ const en: Dict = {
     emptyTitle: "No payments on TA24 properties",
     emptyHint:
       "Once payments are recorded for a property flagged TA24, they appear here.",
+    countProperties: "{n} property|{n} properties",
+    countPayments: "{n} payment|{n} payments",
+  },
+
+  income: {
+    title: "Annual income by location",
+    intro:
+      "Counts what actually came in during each calendar year — the payment date matters, not the due date. Credits flagged as reducing taxable income are deducted. Archived properties are included, as their payments belong to past years.",
+    allLocations: "All locations",
+    noLocation: "No location",
+    exportAll: "All years as CSV",
+    exportYear: "{year} as CSV",
+    year: "Year",
+    property: "Property",
+    tenant: "Tenant",
+    payments: "Payments",
+    received: "Received",
+    receivedIn: "Received {year}",
+    reductions: "Reductions",
+    taxable: "Taxable",
+    total: "Total",
+    sumOf: "Total {year}",
+    breakdown: "Breakdown {year}",
+    archived: "Archived",
+    emptyTitle: "No payments for this location",
+    emptyHint: "Once payments are recorded, they appear here.",
     countProperties: "{n} property|{n} properties",
     countPayments: "{n} payment|{n} payments",
   },
