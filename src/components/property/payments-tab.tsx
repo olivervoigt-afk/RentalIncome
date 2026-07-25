@@ -47,21 +47,36 @@ export default function PaymentsTab({
   };
 
   const dueList = installments(property, periods);
+  const currentYear = new Date().getFullYear();
 
-  // Auswahl der Jahre aus vorhandenen Zahlungen und Fälligkeiten.
+  /* Bei den Eingängen sind künftige Jahre sinnlos — eine Zahlung für 2038
+   * kann niemand erfassen. Bei den fälligen Raten gehören sie dagegen dazu. */
   const years = [
     ...new Set([
       ...payments.map((p) => p.paid_on.slice(0, 4)),
       ...dueList.map((i) => String(i.dueDate.getFullYear())),
     ]),
-  ].sort((a, b) => b.localeCompare(a));
+  ]
+    .filter((y) => view === "soll" || Number(y) <= currentYear)
+    .sort((a, b) => b.localeCompare(a));
+
+  // Wer aus der Soll-Ansicht mit einem künftigen Jahr herüberwechselt,
+  // landet sonst auf einer leeren Liste ohne passende Schaltfläche.
+  const selectedYear =
+    view === "eingaenge" && year !== "alle" && Number(year) > currentYear
+      ? String(currentYear)
+      : year;
 
   const rows =
     view === "soll"
       ? dueList
-          .filter((i) => year === "alle" || String(i.dueDate.getFullYear()) === year)
+          .filter(
+            (i) => selectedYear === "alle" || String(i.dueDate.getFullYear()) === selectedYear,
+          )
           .sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime())
-      : payments.filter((p) => year === "alle" || p.paid_on.startsWith(year));
+      : payments.filter(
+          (p) => selectedYear === "alle" || p.paid_on.startsWith(selectedYear),
+        );
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const currentPage = Math.min(Math.max(1, page), totalPages);
@@ -118,13 +133,13 @@ export default function PaymentsTab({
           {/* Umschalter Ist / Soll */}
           <div className="flex rounded-md border border-border p-0.5">
             <SwitchLink
-              href={href({ ansicht: "eingaenge", jahr: year })}
+              href={href({ ansicht: "eingaenge", jahr: selectedYear })}
               active={view === "eingaenge"}
             >
               {t.property.paymentsTitle}
             </SwitchLink>
             <SwitchLink
-              href={href({ ansicht: "soll", jahr: year })}
+              href={href({ ansicht: "soll", jahr: selectedYear })}
               active={view === "soll"}
             >
               {t.property.dueRates}
@@ -133,14 +148,14 @@ export default function PaymentsTab({
 
           {/* Jahresfilter */}
           <div className="flex flex-wrap items-center gap-1">
-            <YearLink href={href({ ansicht: view, jahr: "alle" })} active={year === "alle"}>
+            <YearLink href={href({ ansicht: view, jahr: "alle" })} active={selectedYear === "alle"}>
               {t.property.allYears}
             </YearLink>
             {years.map((y) => (
               <YearLink
                 key={y}
                 href={href({ ansicht: view, jahr: y })}
-                active={year === y}
+                active={selectedYear === y}
               >
                 {y}
               </YearLink>
@@ -152,7 +167,7 @@ export default function PaymentsTab({
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-surface-muted/40 px-5 py-3">
           <p className="text-sm text-muted">
             {view === "soll" ? t.property.dueLabel : t.property.receivedLabel}
-            {t.property.receivedIn(year)}
+            {t.property.receivedIn(selectedYear)}
             {" · "}
             {t.property.entries(rows.length)}
           </p>
@@ -185,13 +200,13 @@ export default function PaymentsTab({
             </span>
             <div className="flex gap-2">
               <PageLink
-                href={href({ ansicht: view, jahr: year, seite: currentPage - 1 })}
+                href={href({ ansicht: view, jahr: selectedYear, seite: currentPage - 1 })}
                 disabled={currentPage === 1}
               >
                 {t.property.prev}
               </PageLink>
               <PageLink
-                href={href({ ansicht: view, jahr: year, seite: currentPage + 1 })}
+                href={href({ ansicht: view, jahr: selectedYear, seite: currentPage + 1 })}
                 disabled={currentPage === totalPages}
               >
                 {t.property.next}

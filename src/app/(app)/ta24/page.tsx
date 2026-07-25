@@ -63,7 +63,6 @@ export default async function Ta24Page({
                 <th className="px-5 py-3 font-medium">{t.ta24.year}</th>
                 <th className="px-5 py-3 text-right font-medium">{t.ta24.payments}</th>
                 <th className="px-5 py-3 text-right font-medium">{t.ta24.received}</th>
-                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -75,27 +74,24 @@ export default async function Ta24Page({
                   <tr
                     key={year}
                     className={`border-b border-border/60 last:border-0 ${
-                      active ? "bg-accent/10" : ""
+                      active ? "bg-accent/10" : "hover:bg-surface-muted/50"
                     }`}
                   >
-                    <td className="px-5 py-3 font-medium">{year}</td>
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/ta24?jahr=${year}`}
+                        className={`font-medium hover:underline ${
+                          active ? "text-accent" : "hover:text-accent"
+                        }`}
+                      >
+                        {year}
+                      </Link>
+                    </td>
                     <td className="tabular px-5 py-3 text-right text-muted">
                       {cell.count}
                     </td>
                     <td className="tabular px-5 py-3 text-right font-medium">
                       {f.euro(cell.sum)}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      {active ? (
-                        <span className="text-xs text-muted">{t.ta24.shownBelow}</span>
-                      ) : (
-                        <Link
-                          href={`/ta24?jahr=${year}`}
-                          className="text-sm text-accent hover:underline"
-                        >
-                          {t.ta24.breakDown}
-                        </Link>
-                      )}
                     </td>
                   </tr>
                 );
@@ -110,7 +106,6 @@ export default async function Ta24Page({
                 <td className="tabular px-5 py-3 text-right">
                   {f.euro(report.grandTotal)}
                 </td>
-                <td />
               </tr>
             </tfoot>
           </table>
