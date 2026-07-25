@@ -38,7 +38,7 @@ export default async function Ta24Page({
   // Nur Objekte anzeigen, die im gewählten Jahr tatsächlich Geld gebracht haben.
   const rows = report.rows
     .filter((r) => (r.byYear.get(selected)?.count ?? 0) > 0)
-    .sort((a, b) => (b.byYear.get(selected)?.sum ?? 0) - (a.byYear.get(selected)?.sum ?? 0));
+    .sort((a, b) => a.name.localeCompare(b.name, locale));
 
   const yearTotal =
     report.totalsByYear.get(selected) ??

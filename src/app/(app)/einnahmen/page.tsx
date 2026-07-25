@@ -66,7 +66,7 @@ export default async function IncomePage({
   const yearRows = selected
     ? rows
         .filter((row) => (row.byYear.get(selected)?.count ?? 0) > 0)
-        .sort((a, b) => (b.byYear.get(selected)?.sum ?? 0) - (a.byYear.get(selected)?.sum ?? 0))
+        .sort((a, b) => a.name.localeCompare(b.name, locale))
     : [];
   const yearTotal = (selected && totalsByYear.get(selected)) || emptyCell();
 

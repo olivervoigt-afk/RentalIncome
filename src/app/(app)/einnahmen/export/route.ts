@@ -68,7 +68,7 @@ export async function GET(request: Request) {
   for (const year of wanted) {
     const yearRows = rows
       .filter((row) => (row.byYear.get(year)?.count ?? 0) > 0)
-      .sort((a, b) => (b.byYear.get(year)?.sum ?? 0) - (a.byYear.get(year)?.sum ?? 0));
+      .sort((a, b) => a.name.localeCompare(b.name, locale));
 
     const total = emptyCell();
 

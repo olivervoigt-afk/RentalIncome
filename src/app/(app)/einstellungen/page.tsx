@@ -1,7 +1,7 @@
 import ChangePasswordForm from "@/components/change-password-form";
 import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
-import { Badge, Card, CardHeader, Field, Input } from "@/components/ui";
+import { Badge, ButtonLink, Card, CardHeader, Field, Input } from "@/components/ui";
 import {
   addLocation,
   addPaymentSource,
@@ -57,6 +57,24 @@ export default async function SettingsPage() {
           <ChangePasswordForm />
         </div>
       </Card>
+
+      {canEdit && (
+        <Card>
+          <CardHeader
+            title={t.settings.backup}
+            description={t.settings.backupHint}
+            action={
+              <ButtonLink
+                href="/einstellungen/sicherung"
+                variant="secondary"
+                prefetch={false}
+              >
+                {t.settings.backupDownload}
+              </ButtonLink>
+            }
+          />
+        </Card>
+      )}
 
       {canEdit && (
         <Card>

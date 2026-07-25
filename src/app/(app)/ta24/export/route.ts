@@ -46,7 +46,7 @@ export async function GET(request: Request) {
   for (const year of years) {
     const rows = report.rows
       .filter((r) => (r.byYear.get(year)?.count ?? 0) > 0)
-      .sort((a, b) => (b.byYear.get(year)?.sum ?? 0) - (a.byYear.get(year)?.sum ?? 0));
+      .sort((a, b) => a.name.localeCompare(b.name, locale));
     const total =
       report.totalsByYear.get(year) ?? { count: 0, sum: 0, reductions: 0, taxable: 0 };
 

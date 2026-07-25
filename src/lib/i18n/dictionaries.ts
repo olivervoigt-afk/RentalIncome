@@ -361,6 +361,11 @@ const de = {
     deleteLocationDetail:
       '„{name}" steht künftig nicht mehr zur Auswahl. Objekte mit diesem Standort behalten alle Daten und erscheinen dann unter „Ohne Standort".',
 
+    backup: "Datensicherung",
+    backupHint:
+      "Lädt den kompletten Bestand als ZIP herunter — je Tabelle eine CSV-Datei für Excel sowie eine JSON-Datei zum Zurückspielen. Zusätzlich läuft montags und freitags eine automatische Sicherung nach Google Drive.",
+    backupDownload: "Sicherung herunterladen",
+
     sources: "Zahlungsquellen",
     sourcesHint: "Auswahlmöglichkeiten beim Erfassen eines Zahlungseingangs.",
     newSource: "Neue Zahlungsquelle",
@@ -730,6 +735,11 @@ const en: Dict = {
     deleteLocation: "Delete location?",
     deleteLocationDetail:
       "“{name}” will no longer be offered. Properties with this location keep all their data and appear under “No location”.",
+
+    backup: "Data backup",
+    backupHint:
+      "Downloads the entire dataset as a ZIP — one CSV per table for Excel plus a JSON file for restoring. An automatic backup to Google Drive also runs on Mondays and Fridays.",
+    backupDownload: "Download backup",
 
     sources: "Payment sources",
     sourcesHint: "Choices when recording an incoming payment.",
