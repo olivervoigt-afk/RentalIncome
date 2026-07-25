@@ -1,0 +1,43 @@
+import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import PropertyForm from "@/components/property-form";
+import { Card, CardHeader } from "@/components/ui";
+import { updateProperty } from "@/lib/actions/properties";
+import { requireProfile } from "@/lib/auth";
+import { getPropertyDetail } from "@/lib/queries";
+
+export default async function EditPropertyPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const profile = await requireProfile();
+  if (profile.role === "viewer") redirect(`/objekte/${id}`);
+
+  const detail = await getPropertyDetail(id);
+  if (!detail) notFound();
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div>
+        <Link href={`/objekte/${id}`} className="text-sm text-muted hover:text-foreground">
+          ← Zurück zum Objekt
+        </Link>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+          {detail.property.name} bearbeiten
+        </h1>
+      </div>
+
+      <Card>
+        <CardHeader
+          title="Stammdaten"
+          description="Änderungen an Mietbeginn oder Laufzeit werden in der Vertragshistorie festgehalten."
+        />
+        <div className="p-5">
+          <PropertyForm action={updateProperty} property={detail.property} />
+        </div>
+      </Card>
+    </div>
+  );
+}

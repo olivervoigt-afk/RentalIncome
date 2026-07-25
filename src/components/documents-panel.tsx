@@ -1,0 +1,74 @@
+import ConfirmButton from "@/components/confirm-button";
+import DocumentLink from "@/components/document-link";
+import InlineForm from "@/components/inline-form";
+import { Card, CardHeader, Field, Input } from "@/components/ui";
+import { deleteDocument, uploadDocument } from "@/lib/actions/properties";
+import type { PropertyDocument } from "@/lib/types";
+
+function formatSize(bytes: number | null): string {
+  if (!bytes) return "";
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+}
+
+export default function DocumentsPanel({
+  propertyId,
+  documents,
+  canEdit,
+}: {
+  propertyId: string;
+  documents: PropertyDocument[];
+  canEdit: boolean;
+}) {
+  return (
+    <Card>
+      <CardHeader
+        title="Dokumente"
+        description="Mietverträge und andere Unterlagen zu diesem Objekt."
+      />
+
+      {documents.length === 0 ? (
+        <p className="px-5 py-6 text-sm text-muted">Keine Dokumente hinterlegt.</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {documents.map((doc) => (
+            <li key={doc.id} className="flex items-center justify-between gap-4 px-5 py-3">
+              <div className="min-w-0 text-sm">
+                <DocumentLink path={doc.storage_path} name={doc.file_name} />
+                <p className="text-muted">
+                  {new Date(doc.uploaded_at).toLocaleDateString("de-DE")}
+                  {doc.size_bytes ? ` · ${formatSize(doc.size_bytes)}` : ""}
+                </p>
+              </div>
+              {canEdit && (
+                <form action={deleteDocument}>
+                  <input type="hidden" name="id" value={doc.id} />
+                  <input type="hidden" name="property_id" value={propertyId} />
+                  <input type="hidden" name="storage_path" value={doc.storage_path} />
+                  <ConfirmButton message="Dieses Dokument löschen?">Löschen</ConfirmButton>
+                </form>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {canEdit && (
+        <div className="border-t border-border bg-surface-muted/40 p-5">
+          <InlineForm action={uploadDocument} submitLabel="Hochladen">
+            <input type="hidden" name="property_id" value={propertyId} />
+            <Field label="Datei auswählen" hint="PDF oder Bild, maximal 20 MB.">
+              <Input
+                name="file"
+                type="file"
+                accept=".pdf,image/*"
+                required
+                className="file:mr-3 file:rounded file:border-0 file:bg-surface-muted file:px-3 file:py-1 file:text-sm"
+              />
+            </Field>
+          </InlineForm>
+        </div>
+      )}
+    </Card>
+  );
+}
