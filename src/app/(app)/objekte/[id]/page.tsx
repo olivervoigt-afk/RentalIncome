@@ -73,6 +73,9 @@ export default async function PropertyDetailPage({
 
         {canEdit && (
           <div className="flex items-center gap-2">
+            <ButtonLink href={`/objekte/${property.id}#zahlungen`}>
+              Zahlung erfassen
+            </ButtonLink>
             <ButtonLink href={`/objekte/${property.id}/bearbeiten`} variant="secondary">
               Bearbeiten
             </ButtonLink>
@@ -228,7 +231,7 @@ export default async function PropertyDetailPage({
       </div>
 
       {/* Zahlungen */}
-      <Card>
+      <Card id="zahlungen">
         <CardHeader
           title="Zahlungseingänge"
           description={`${payments.length} ${payments.length === 1 ? "Eintrag" : "Einträge"}`}

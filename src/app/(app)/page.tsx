@@ -91,6 +91,7 @@ export default async function DashboardPage({
                   <th className="px-5 py-3 text-right font-medium">Restlaufzeit</th>
                   <th className="px-5 py-3 font-medium">Vertragsende</th>
                   <th className="px-5 py-3 text-center font-medium">TA24</th>
+                  {canEdit && <th className="px-5 py-3" />}
                 </tr>
               </thead>
               <tbody>
@@ -144,6 +145,16 @@ export default async function DashboardPage({
                     <td className="px-5 py-3 text-center">
                       {p.ta24 ? <Badge tone="accent">Ja</Badge> : <span className="text-muted">—</span>}
                     </td>
+                    {canEdit && (
+                      <td className="px-5 py-3 text-right">
+                        <Link
+                          href={`/objekte/${p.id}#zahlungen`}
+                          className="whitespace-nowrap text-sm text-accent hover:underline"
+                        >
+                          + Zahlung
+                        </Link>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -161,7 +172,7 @@ export default async function DashboardPage({
                   >
                     {formatEuro(totals.balance)}
                   </td>
-                  <td colSpan={3} />
+                  <td colSpan={canEdit ? 4 : 3} />
                 </tr>
               </tfoot>
             </table>
