@@ -2,38 +2,33 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ConfirmButton from "@/components/confirm-button";
 import DocumentsPanel from "@/components/documents-panel";
-import InlineForm from "@/components/inline-form";
-import {
-  Badge,
-  Button,
-  ButtonLink,
-  Card,
-  CardHeader,
-  Field,
-  Input,
-  Select,
-} from "@/components/ui";
-import {
-  addCredit,
-  addPayment,
-  addRentPeriod,
-  deleteCredit,
-  deletePayment,
-  deleteProperty,
-  deleteRentPeriod,
-  setArchived,
-} from "@/lib/actions/properties";
+import CreditsTab from "@/components/property/credits-tab";
+import OverviewTab from "@/components/property/overview-tab";
+import PaymentsTab, { type PaymentsView } from "@/components/property/payments-tab";
+import TabNav from "@/components/tab-nav";
+import { Badge, Button, ButtonLink, Card, CardHeader } from "@/components/ui";
+import { deleteProperty, setArchived } from "@/lib/actions/properties";
 import { getProfile } from "@/lib/auth";
 import { getPaymentSources, getPropertyDetail } from "@/lib/queries";
-import { formatDate, formatEuro, toISODate } from "@/lib/rent";
-import { FREQUENCY_LABELS } from "@/lib/types";
+import { formatDate, formatEuro } from "@/lib/rent";
+
+const TABS = ["uebersicht", "zahlungen", "gutschriften", "dokumente", "historie"] as const;
+type Tab = (typeof TABS)[number];
 
 export default async function PropertyDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    ansicht?: string;
+    jahr?: string;
+    seite?: string;
+  }>;
 }) {
   const { id } = await params;
+  const query = await searchParams;
 
   const [profile, detail, sources] = await Promise.all([
     getProfile(),
@@ -45,12 +40,15 @@ export default async function PropertyDetailPage({
 
   const { property, periods, payments, credits, documents, history, summary } = detail;
   const canEdit = profile?.role !== "viewer";
-  const today = toISODate(new Date());
-  const sourceName = new Map(sources.map((s) => [s.id, s.name]));
+
+  const tab: Tab = TABS.includes(query.tab as Tab) ? (query.tab as Tab) : "uebersicht";
+  const view: PaymentsView = query.ansicht === "soll" ? "soll" : "eingaenge";
+  const year = query.jahr ?? String(new Date().getFullYear());
+  const page = Number(query.seite) || 1;
 
   return (
     <div className="space-y-6">
-      {/* Kopfbereich */}
+      {/* Kopfbereich — bleibt über allen Tabs gleich */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/objekte" className="text-sm text-muted hover:text-foreground">
@@ -73,7 +71,7 @@ export default async function PropertyDetailPage({
 
         {canEdit && (
           <div className="flex items-center gap-2">
-            <ButtonLink href={`/objekte/${property.id}#zahlungen`}>
+            <ButtonLink href={`/objekte/${property.id}?tab=zahlungen`}>
               Zahlung erfassen
             </ButtonLink>
             <ButtonLink href={`/objekte/${property.id}/bearbeiten`} variant="secondary">
@@ -90,7 +88,7 @@ export default async function PropertyDetailPage({
         )}
       </div>
 
-      {/* Kennzahlen */}
+      {/* Kennzahlen — ebenfalls immer sichtbar */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Fällig bisher" value={formatEuro(summary.totalDue)} />
         <Stat label="Erhalten" value={formatEuro(summary.totalReceived)} />
@@ -103,224 +101,55 @@ export default async function PropertyDetailPage({
         />
       </div>
 
-      <Card className="px-5 py-4">
-        <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <Detail label="Mietbeginn" value={formatDate(property.start_date)} />
-          <Detail label="Vertragsende" value={formatDate(summary.contractEnd)} />
-          <Detail
-            label="Restlaufzeit"
-            value={summary.remainingMonths > 0 ? `${summary.remainingMonths} Monate` : "Abgelaufen"}
-          />
-          <Detail label="Rhythmus" value={FREQUENCY_LABELS[property.payment_frequency]} />
-          <Detail label="Laufzeit gesamt" value={`${property.term_months} Monate`} />
-          <Detail label="Vertragsvolumen" value={formatEuro(summary.totalContract)} />
-        </dl>
-        {property.notes && (
-          <p className="mt-4 whitespace-pre-wrap border-t border-border pt-4 text-sm text-muted">
-            {property.notes}
-          </p>
-        )}
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Mietstaffel */}
-        <Card>
-          <CardHeader
-            title="Mietstaffel"
-            description="Zeiträume mit unterschiedlicher Miete. Der Betrag gilt je Zahlungszeitraum."
-          />
-          {periods.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-muted">
-              Noch keine Miete hinterlegt — ohne Eintrag bleibt die Forderung bei 0 €.
-            </p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {periods.map((period) => (
-                <li key={period.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                  <div className="text-sm">
-                    <p className="tabular font-medium">{formatEuro(Number(period.amount))}</p>
-                    <p className="text-muted">
-                      ab {formatDate(period.valid_from)}
-                      {period.valid_to ? ` bis ${formatDate(period.valid_to)}` : " (offen)"}
-                    </p>
-                  </div>
-                  {canEdit && (
-                    <form action={deleteRentPeriod}>
-                      <input type="hidden" name="id" value={period.id} />
-                      <input type="hidden" name="property_id" value={property.id} />
-                      <ConfirmButton message="Diesen Mietzeitraum löschen?">
-                        Löschen
-                      </ConfirmButton>
-                    </form>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {canEdit && (
-            <div className="border-t border-border bg-surface-muted/40 p-5">
-              <InlineForm action={addRentPeriod} submitLabel="Zeitraum hinzufügen">
-                <input type="hidden" name="property_id" value={property.id} />
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="Gültig ab">
-                    <Input name="valid_from" type="date" required defaultValue={property.start_date} />
-                  </Field>
-                  <Field label="Gültig bis">
-                    <Input name="valid_to" type="date" />
-                  </Field>
-                  <Field label="Betrag (€)">
-                    <Input name="amount" inputMode="decimal" required placeholder="1250,00" />
-                  </Field>
-                </div>
-              </InlineForm>
-            </div>
-          )}
-        </Card>
-
-        {/* Gutschriften */}
-        <Card>
-          <CardHeader
-            title="Gutschriften"
-            description="Beträge, die dem Mieter angerechnet werden, z. B. selbst bezahlte Handwerker."
-          />
-          {credits.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-muted">Keine Gutschriften erfasst.</p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {credits.map((credit) => (
-                <li key={credit.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                  <div className="text-sm">
-                    <p className="tabular font-medium">{formatEuro(Number(credit.amount))}</p>
-                    <p className="text-muted">
-                      {formatDate(credit.credited_on)}
-                      {credit.reason && ` · ${credit.reason}`}
-                    </p>
-                  </div>
-                  {canEdit && (
-                    <form action={deleteCredit}>
-                      <input type="hidden" name="id" value={credit.id} />
-                      <input type="hidden" name="property_id" value={property.id} />
-                      <ConfirmButton message="Diese Gutschrift löschen?">Löschen</ConfirmButton>
-                    </form>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {canEdit && (
-            <div className="border-t border-border bg-surface-muted/40 p-5">
-              <InlineForm action={addCredit} submitLabel="Gutschrift erfassen">
-                <input type="hidden" name="property_id" value={property.id} />
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="Datum">
-                    <Input name="credited_on" type="date" required defaultValue={today} />
-                  </Field>
-                  <Field label="Betrag (€)">
-                    <Input name="amount" inputMode="decimal" required />
-                  </Field>
-                  <Field label="Grund">
-                    <Input name="reason" placeholder="z. B. Sanitär-Reparatur" />
-                  </Field>
-                </div>
-              </InlineForm>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Zahlungen */}
-      <Card id="zahlungen">
-        <CardHeader
-          title="Zahlungseingänge"
-          description={`${payments.length} ${payments.length === 1 ? "Eintrag" : "Einträge"}`}
-        />
-        {payments.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-muted">Noch keine Zahlungen erfasst.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                  <th className="px-5 py-3 font-medium">Zahlungsdatum</th>
-                  <th className="px-5 py-3 text-right font-medium">Betrag</th>
-                  <th className="px-5 py-3 font-medium">Quelle</th>
-                  <th className="px-5 py-3 font-medium">Notiz</th>
-                  {canEdit && <th className="px-5 py-3" />}
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id} className="border-b border-border/60 last:border-0">
-                    <td className="tabular px-5 py-3">{formatDate(payment.paid_on)}</td>
-                    <td className="tabular px-5 py-3 text-right font-medium">
-                      {formatEuro(Number(payment.amount))}
-                    </td>
-                    <td className="px-5 py-3">
-                      {payment.source_id ? (
-                        <Badge>{sourceName.get(payment.source_id) ?? "Unbekannt"}</Badge>
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-muted">{payment.note || "—"}</td>
-                    {canEdit && (
-                      <td className="px-5 py-3 text-right">
-                        <form action={deletePayment}>
-                          <input type="hidden" name="id" value={payment.id} />
-                          <input type="hidden" name="property_id" value={property.id} />
-                          <ConfirmButton message="Diese Zahlung löschen?">Löschen</ConfirmButton>
-                        </form>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {canEdit && (
-          <div className="border-t border-border bg-surface-muted/40 p-5">
-            <InlineForm action={addPayment} submitLabel="Zahlung erfassen">
-              <input type="hidden" name="property_id" value={property.id} />
-              <div className="grid gap-3 sm:grid-cols-4">
-                <Field label="Zahlungsdatum">
-                  <Input name="paid_on" type="date" required defaultValue={today} />
-                </Field>
-                <Field label="Betrag (€)">
-                  <Input name="amount" inputMode="decimal" required placeholder="1250,00" />
-                </Field>
-                <Field label="Quelle">
-                  <Select name="source_id" defaultValue={sources[0]?.id ?? ""}>
-                    <option value="">Ohne Angabe</option>
-                    {sources
-                      .filter((s) => s.active)
-                      .map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                  </Select>
-                </Field>
-                <Field label="Notiz">
-                  <Input name="note" />
-                </Field>
-              </div>
-            </InlineForm>
-          </div>
-        )}
-      </Card>
-
-      <DocumentsPanel
-        propertyId={property.id}
-        documents={documents}
-        canEdit={canEdit}
+      <TabNav
+        active={tab}
+        basePath={`/objekte/${property.id}`}
+        items={[
+          { key: "uebersicht", label: "Übersicht" },
+          { key: "zahlungen", label: "Zahlungen", count: payments.length },
+          { key: "gutschriften", label: "Gutschriften", count: credits.length },
+          { key: "dokumente", label: "Dokumente", count: documents.length },
+          ...(history.length > 0
+            ? [{ key: "historie", label: "Historie", count: history.length }]
+            : []),
+        ]}
       />
 
-      {/* Vertragshistorie */}
-      {history.length > 0 && (
+      {tab === "uebersicht" && (
+        <OverviewTab
+          property={property}
+          periods={periods}
+          summary={summary}
+          canEdit={canEdit}
+        />
+      )}
+
+      {tab === "zahlungen" && (
+        <PaymentsTab
+          property={property}
+          periods={periods}
+          payments={payments}
+          sources={sources}
+          canEdit={canEdit}
+          view={view}
+          year={year}
+          page={page}
+        />
+      )}
+
+      {tab === "gutschriften" && (
+        <CreditsTab propertyId={property.id} credits={credits} canEdit={canEdit} />
+      )}
+
+      {tab === "dokumente" && (
+        <DocumentsPanel
+          propertyId={property.id}
+          documents={documents}
+          canEdit={canEdit}
+        />
+      )}
+
+      {tab === "historie" && (
         <Card>
           <CardHeader
             title="Vertragshistorie"
@@ -350,7 +179,7 @@ export default async function PropertyDetailPage({
         </Card>
       )}
 
-      {canEdit && (
+      {canEdit && tab === "uebersicht" && (
         <Card className="border-negative/30 px-5 py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -399,14 +228,5 @@ function Stat({
       </p>
       {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
     </Card>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-muted">{label}</dt>
-      <dd className="tabular mt-0.5 font-medium">{value}</dd>
-    </div>
   );
 }

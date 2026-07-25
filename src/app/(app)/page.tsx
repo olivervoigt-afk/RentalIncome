@@ -148,7 +148,7 @@ export default async function DashboardPage({
                     {canEdit && (
                       <td className="px-5 py-3 text-right">
                         <Link
-                          href={`/objekte/${p.id}#zahlungen`}
+                          href={`/objekte/${p.id}?tab=zahlungen`}
                           className="whitespace-nowrap text-sm text-accent hover:underline"
                         >
                           + Zahlung
