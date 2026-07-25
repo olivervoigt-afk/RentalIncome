@@ -136,14 +136,6 @@ export default async function DashboardPage({
                         </span>
                         <span className="ml-3 text-sm font-normal text-muted">
                           {items.length} {items.length === 1 ? "Objekt" : "Objekte"}
-                          {" · Saldo "}
-                          <span
-                            className={`tabular font-medium ${
-                              groupTotals.balance < 0 ? "text-negative" : "text-positive"
-                            }`}
-                          >
-                            {formatEuro(groupTotals.balance)}
-                          </span>
                         </span>
                       </th>
                     </tr>
@@ -228,14 +220,7 @@ export default async function DashboardPage({
                         <td className="tabular px-5 py-2 text-right">
                           {formatEuro(groupTotals.received)}
                         </td>
-                        <td
-                          className={`tabular px-5 py-2 text-right font-medium ${
-                            groupTotals.balance < 0 ? "text-negative" : "text-positive"
-                          }`}
-                        >
-                          {formatEuro(groupTotals.balance)}
-                        </td>
-                        <td colSpan={canEdit ? 4 : 3} />
+                        <td colSpan={canEdit ? 5 : 4} />
                       </tr>
                     )}
                   </tbody>
