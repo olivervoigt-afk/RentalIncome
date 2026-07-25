@@ -35,16 +35,17 @@ export default function DangerAction({
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) setTyped("");
-  }, [open]);
-
   const ready = !confirmWord || typed.trim() === confirmWord.trim();
+
+  function close() {
+    setOpen(false);
+    setTyped("");
+  }
 
   return (
     <>
@@ -62,7 +63,7 @@ export default function DangerAction({
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={(e) => e.target === e.currentTarget && setOpen(false)}
+          onClick={(e) => { if (e.target === e.currentTarget) close(); }}
           role="dialog"
           aria-modal="true"
           aria-label={title}
@@ -93,7 +94,7 @@ export default function DangerAction({
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 className="rounded-md border border-border px-3.5 py-2 text-sm font-medium transition-colors hover:bg-surface-muted"
               >
                 Abbrechen
