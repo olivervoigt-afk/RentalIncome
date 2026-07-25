@@ -6,7 +6,7 @@ import type { Formatters } from "@/lib/format";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import type { PropertySummary } from "@/lib/rent";
 import type { Property, RentPeriod } from "@/lib/types";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { fill } from "@/lib/i18n/dictionaries";
 
 export default function OverviewTab({
   t,

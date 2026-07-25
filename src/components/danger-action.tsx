@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useDict } from "@/components/dict-provider";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { fill } from "@/lib/i18n/dictionaries";
 
 /**
  * Löschaktion mit Rückfrage in einem eigenen Dialog.

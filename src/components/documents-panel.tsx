@@ -6,7 +6,7 @@ import { deleteDocument, uploadDocument } from "@/lib/actions/properties";
 import type { Formatters } from "@/lib/format";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import type { PropertyDocument } from "@/lib/types";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { fill } from "@/lib/i18n/dictionaries";
 
 function formatSize(bytes: number | null): string {
   if (!bytes) return "";

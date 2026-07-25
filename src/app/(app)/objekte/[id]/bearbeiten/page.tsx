@@ -6,7 +6,7 @@ import { updateProperty } from "@/lib/actions/properties";
 import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getLocations, getPropertyDetail } from "@/lib/queries";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { fill } from "@/lib/i18n/dictionaries";
 
 export default async function EditPropertyPage({
   params,

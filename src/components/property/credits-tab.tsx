@@ -6,7 +6,7 @@ import type { Formatters } from "@/lib/format";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import { toISODate } from "@/lib/rent";
 import type { Credit } from "@/lib/types";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { plural } from "@/lib/i18n/dictionaries";
 
 export default function CreditsTab({
   t,

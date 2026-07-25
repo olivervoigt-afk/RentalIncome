@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useDict } from "@/components/dict-provider";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { plural } from "@/lib/i18n/dictionaries";
 
 /** Blendet archivierte und abgelaufene Objekte ein bzw. aus. */
 export default function ArchiveToggle({

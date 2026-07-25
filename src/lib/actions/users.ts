@@ -7,7 +7,7 @@ import { getDict } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/lib/types";
 import type { ActionState } from "./auth";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { fill } from "@/lib/i18n/dictionaries";
 
 const ROLES: UserRole[] = ["admin", "editor", "viewer"];
 

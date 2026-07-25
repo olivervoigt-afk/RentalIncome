@@ -11,7 +11,7 @@ import {
 import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getLocations, getPaymentSources } from "@/lib/queries";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { fill } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Einstellungen" };
 

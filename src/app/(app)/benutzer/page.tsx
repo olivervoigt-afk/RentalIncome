@@ -8,7 +8,7 @@ import { createUser, deleteUser } from "@/lib/actions/users";
 import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getProfiles } from "@/lib/queries";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { fill } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Benutzer" };
 

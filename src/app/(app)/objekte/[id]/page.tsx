@@ -12,7 +12,7 @@ import { getProfile } from "@/lib/auth";
 import { formatters } from "@/lib/format";
 import { getDict } from "@/lib/i18n";
 import { getPaymentSources, getPropertyDetail } from "@/lib/queries";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import { fill } from "@/lib/i18n/dictionaries";
 
 const TABS = ["uebersicht", "zahlungen", "gutschriften", "dokumente", "historie"] as const;
 type Tab = (typeof TABS)[number];
