@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Die Vorlage ohne echte Werte soll ins Repository.
 !.env.example
+
+# Datensicherungen gehören nicht ins öffentliche Repository.
+RentalIncomeBackup/

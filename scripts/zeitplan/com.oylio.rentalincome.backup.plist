@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.oylio.rentalincome.backup</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/olivervoigt/.local/bin/node</string>
+    <string>/Users/olivervoigt/Downloads/RentalIncome/scripts/backup.mjs</string>
+  </array>
+
+  <!-- Montag (1) und Freitag (5), jeweils 8:00 Uhr.
+       Ist der Mac zu dem Zeitpunkt aus, holt launchd den Lauf beim
+       nächsten Start nach. -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Weekday</key><integer>1</integer>
+      <key>Hour</key><integer>8</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+    <dict>
+      <key>Weekday</key><integer>5</integer>
+      <key>Hour</key><integer>8</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/olivervoigt/Downloads/RentalIncome</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/olivervoigt/Documents/RentalIncomeBackup/protokoll.txt</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/olivervoigt/Documents/RentalIncomeBackup/protokoll.txt</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
