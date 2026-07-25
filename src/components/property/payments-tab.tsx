@@ -3,7 +3,9 @@ import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
 import { Badge, Card, CardHeader, Field, Input, Select } from "@/components/ui";
 import { addPayment, deletePayment } from "@/lib/actions/properties";
-import { formatDate, formatEuro, installments, toISODate } from "@/lib/rent";
+import type { Formatters } from "@/lib/format";
+import type { Dict } from "@/lib/i18n/dictionaries";
+import { installments, toISODate } from "@/lib/rent";
 import type { Payment, PaymentSource, Property, RentPeriod } from "@/lib/types";
 
 const PAGE_SIZE = 25;
@@ -11,6 +13,8 @@ const PAGE_SIZE = 25;
 export type PaymentsView = "eingaenge" | "soll";
 
 export default function PaymentsTab({
+  t,
+  f,
   property,
   periods,
   payments,
@@ -20,6 +24,8 @@ export default function PaymentsTab({
   year,
   page,
 }: {
+  t: Dict;
+  f: Formatters;
   property: Property;
   periods: RentPeriod[];
   payments: Payment[];
@@ -70,12 +76,12 @@ export default function PaymentsTab({
     <div className="space-y-6">
       {canEdit && view === "eingaenge" && (
         <Card>
-          <CardHeader title="Zahlung erfassen" />
+          <CardHeader title={t.property.recordPayment} />
           <div className="p-5">
-            <InlineForm action={addPayment} submitLabel="Zahlung erfassen">
+            <InlineForm action={addPayment} submitLabel={t.property.recordPayment}>
               <input type="hidden" name="property_id" value={property.id} />
               <div className="grid gap-3 sm:grid-cols-4">
-                <Field label="Zahlungsdatum">
+                <Field label={t.property.paymentDate}>
                   <Input
                     name="paid_on"
                     type="date"
@@ -83,12 +89,12 @@ export default function PaymentsTab({
                     defaultValue={toISODate(new Date())}
                   />
                 </Field>
-                <Field label="Betrag (€)">
+                <Field label={t.common.amount}>
                   <Input name="amount" inputMode="decimal" required placeholder="1250,00" />
                 </Field>
-                <Field label="Quelle">
+                <Field label={t.common.source}>
                   <Select name="source_id" defaultValue={sources[0]?.id ?? ""}>
-                    <option value="">Ohne Angabe</option>
+                    <option value="">{t.property.withoutSource}</option>
                     {sources
                       .filter((s) => s.active)
                       .map((s) => (
@@ -98,7 +104,7 @@ export default function PaymentsTab({
                       ))}
                   </Select>
                 </Field>
-                <Field label="Notiz">
+                <Field label={t.common.note}>
                   <Input name="note" />
                 </Field>
               </div>
@@ -115,20 +121,20 @@ export default function PaymentsTab({
               href={href({ ansicht: "eingaenge", jahr: year })}
               active={view === "eingaenge"}
             >
-              Zahlungseingänge
+              {t.property.paymentsTitle}
             </SwitchLink>
             <SwitchLink
               href={href({ ansicht: "soll", jahr: year })}
               active={view === "soll"}
             >
-              Fällige Raten
+              {t.property.dueRates}
             </SwitchLink>
           </div>
 
           {/* Jahresfilter */}
           <div className="flex flex-wrap items-center gap-1">
             <YearLink href={href({ ansicht: view, jahr: "alle" })} active={year === "alle"}>
-              Alle
+              {t.property.allYears}
             </YearLink>
             {years.map((y) => (
               <YearLink
@@ -145,24 +151,26 @@ export default function PaymentsTab({
         {/* Summe des gewählten Zeitraums */}
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-surface-muted/40 px-5 py-3">
           <p className="text-sm text-muted">
-            {view === "soll" ? "Fällig" : "Erhalten"}
-            {year === "alle" ? " insgesamt" : ` im Jahr ${year}`}
+            {view === "soll" ? t.property.dueLabel : t.property.receivedLabel}
+            {t.property.receivedIn(year)}
             {" · "}
-            {rows.length} {rows.length === 1 ? "Eintrag" : "Einträge"}
+            {t.property.entries(rows.length)}
           </p>
-          <p className="tabular text-lg font-semibold">{formatEuro(periodTotal)}</p>
+          <p className="tabular text-lg font-semibold">{f.euro(periodTotal)}</p>
         </div>
 
         {visible.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-muted">
             {view === "soll"
-              ? "Für diesen Zeitraum sind keine Raten fällig."
-              : "Keine Zahlungen in diesem Zeitraum erfasst."}
+              ? t.property.noDueInPeriod
+              : t.property.noPaymentsInPeriod}
           </p>
         ) : view === "soll" ? (
-          <DueTable rows={visible as typeof dueList} />
+          <DueTable t={t} f={f} rows={visible as typeof dueList} />
         ) : (
           <PaymentTable
+            t={t}
+            f={f}
             rows={visible as Payment[]}
             sources={sources}
             propertyId={property.id}
@@ -173,20 +181,20 @@ export default function PaymentsTab({
         {totalPages > 1 && (
           <div className="flex items-center justify-between gap-4 border-t border-border px-5 py-3 text-sm">
             <span className="text-muted">
-              Seite {currentPage} von {totalPages}
+              {t.property.pageOf(currentPage, totalPages)}
             </span>
             <div className="flex gap-2">
               <PageLink
                 href={href({ ansicht: view, jahr: year, seite: currentPage - 1 })}
                 disabled={currentPage === 1}
               >
-                ← Zurück
+                {t.property.prev}
               </PageLink>
               <PageLink
                 href={href({ ansicht: view, jahr: year, seite: currentPage + 1 })}
                 disabled={currentPage === totalPages}
               >
-                Weiter →
+                {t.property.next}
               </PageLink>
             </div>
           </div>
@@ -197,11 +205,15 @@ export default function PaymentsTab({
 }
 
 function PaymentTable({
+  t,
+  f,
   rows,
   sources,
   propertyId,
   canEdit,
 }: {
+  t: Dict;
+  f: Formatters;
   rows: Payment[];
   sources: PaymentSource[];
   propertyId: string;
@@ -214,36 +226,36 @@ function PaymentTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-5 py-3 font-medium">Zahlungsdatum</th>
-            <th className="px-5 py-3 text-right font-medium">Betrag</th>
-            <th className="px-5 py-3 font-medium">Quelle</th>
-            <th className="px-5 py-3 font-medium">Notiz</th>
+            <th className="px-5 py-3 font-medium">{t.property.paymentDate}</th>
+            <th className="px-5 py-3 text-right font-medium">{t.common.amount}</th>
+            <th className="px-5 py-3 font-medium">{t.common.source}</th>
+            <th className="px-5 py-3 font-medium">{t.common.note}</th>
             {canEdit && <th className="px-5 py-3" />}
           </tr>
         </thead>
         <tbody>
           {rows.map((payment) => (
             <tr key={payment.id} className="border-b border-border/60 last:border-0">
-              <td className="tabular px-5 py-3">{formatDate(payment.paid_on)}</td>
+              <td className="tabular px-5 py-3">{f.date(payment.paid_on)}</td>
               <td className="tabular px-5 py-3 text-right font-medium">
-                {formatEuro(Number(payment.amount))}
+                {f.euro(Number(payment.amount))}
               </td>
               <td className="px-5 py-3">
                 {payment.source_id ? (
-                  <Badge>{sourceName.get(payment.source_id) ?? "Unbekannt"}</Badge>
+                  <Badge>{sourceName.get(payment.source_id) ?? t.property.unknownSource}</Badge>
                 ) : (
                   <span className="text-muted">—</span>
                 )}
               </td>
-              <td className="px-5 py-3 text-muted">{payment.note || "—"}</td>
+              <td className="px-5 py-3 text-muted">{payment.note || t.common.none}</td>
               {canEdit && (
                 <td className="px-5 py-3 text-right">
                   <DangerAction
                     action={deletePayment}
                     fields={{ id: payment.id, property_id: propertyId }}
-                    trigger="Löschen"
-                    title="Zahlung löschen?"
-                    description={`${formatEuro(Number(payment.amount))} vom ${formatDate(payment.paid_on)} wird entfernt. Der Saldo erhöht sich entsprechend.`}
+                    trigger={t.common.delete}
+                    title={t.property.paymentsTitle}
+                    description={`${f.euro(Number(payment.amount))} vom ${f.date(payment.paid_on)} wird entfernt. Der Saldo erhöht sich entsprechend.`}
                   />
                 </td>
               )}
@@ -255,7 +267,15 @@ function PaymentTable({
   );
 }
 
-function DueTable({ rows }: { rows: { dueDate: Date; amount: number | null }[] }) {
+function DueTable({
+  t,
+  f,
+  rows,
+}: {
+  t: Dict;
+  f: Formatters;
+  rows: { dueDate: Date; amount: number | null }[];
+}) {
   const today = new Date();
 
   return (
@@ -263,9 +283,9 @@ function DueTable({ rows }: { rows: { dueDate: Date; amount: number | null }[] }
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-5 py-3 font-medium">Fälligkeit</th>
-            <th className="px-5 py-3 text-right font-medium">Betrag</th>
-            <th className="px-5 py-3 font-medium">Status</th>
+            <th className="px-5 py-3 font-medium">{t.property.due}</th>
+            <th className="px-5 py-3 text-right font-medium">{t.common.amount}</th>
+            <th className="px-5 py-3 font-medium">{t.property.status}</th>
           </tr>
         </thead>
         <tbody>
@@ -277,19 +297,19 @@ function DueTable({ rows }: { rows: { dueDate: Date; amount: number | null }[] }
                 key={row.dueDate.toISOString()}
                 className="border-b border-border/60 last:border-0"
               >
-                <td className="tabular px-5 py-3">{formatDate(row.dueDate)}</td>
+                <td className="tabular px-5 py-3">{f.date(row.dueDate)}</td>
                 <td className="tabular px-5 py-3 text-right font-medium">
                   {row.amount === null ? (
-                    <span className="text-negative">keine Miete hinterlegt</span>
+                    <span className="text-negative">{t.property.noRateSet}</span>
                   ) : (
-                    formatEuro(row.amount)
+                    f.euro(row.amount)
                   )}
                 </td>
                 <td className="px-5 py-3">
                   {isPast ? (
-                    <Badge>Fällig</Badge>
+                    <Badge>{t.property.isDue}</Badge>
                   ) : (
-                    <span className="text-muted">Künftig</span>
+                    <span className="text-muted">{t.property.future}</span>
                   )}
                 </td>
               </tr>

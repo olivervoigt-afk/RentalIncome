@@ -4,8 +4,10 @@ import { useActionState } from "react";
 import { changePassword } from "@/lib/actions/auth";
 import type { ActionState } from "@/lib/actions/auth";
 import { Button, Field, FormMessage, Input } from "@/components/ui";
+import { useDict } from "@/components/dict-provider";
 
 export default function ChangePasswordForm() {
+  const { t } = useDict();
   const [state, action, pending] = useActionState<ActionState, FormData>(
     changePassword,
     {},
@@ -14,7 +16,7 @@ export default function ChangePasswordForm() {
   return (
     <form action={action} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Neues Passwort" hint="Mindestens 8 Zeichen.">
+        <Field label={t.settings.newPassword} hint={t.settings.minChars}>
           <Input
             name="password"
             type="password"
@@ -23,7 +25,7 @@ export default function ChangePasswordForm() {
             minLength={8}
           />
         </Field>
-        <Field label="Neues Passwort wiederholen">
+        <Field label={t.settings.repeatPassword}>
           <Input
             name="confirm"
             type="password"
@@ -37,7 +39,7 @@ export default function ChangePasswordForm() {
       <FormMessage state={state} />
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Wird geändert …" : "Passwort ändern"}
+        {pending ? t.settings.changingPassword : t.settings.submitPassword}
       </Button>
     </form>
   );

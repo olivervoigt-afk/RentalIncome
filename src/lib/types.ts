@@ -27,6 +27,7 @@ export type Profile = {
   email: string;
   full_name: string;
   role: UserRole;
+  locale: UserLocale;
   created_at: string;
 };
 
@@ -111,3 +112,6 @@ export type PropertyDocument = {
   uploaded_at: string;
   uploaded_by: string | null;
 };
+
+/** Sprache des Benutzers; die Beschriftungen liegen in den Wörterbüchern. */
+export type UserLocale = "de" | "en";

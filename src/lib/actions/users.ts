@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireEditor } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getDict } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/lib/types";
 import type { ActionState } from "./auth";
@@ -18,6 +19,7 @@ export async function createUser(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const { t } = await getDict();
 
   const email = text(formData, "email").toLowerCase();
   const full_name = text(formData, "full_name");
@@ -25,12 +27,12 @@ export async function createUser(
   const role = text(formData, "role") as UserRole;
 
   if (!email || !full_name) {
-    return { error: "Bitte Name und E-Mail-Adresse angeben." };
+    return { error: t.actions.needNameEmail };
   }
   if (password.length < 8) {
-    return { error: "Das Basispasswort muss mindestens 8 Zeichen lang sein." };
+    return { error: t.actions.basePasswordTooShort };
   }
-  if (!ROLES.includes(role)) return { error: "Ungültige Rolle." };
+  if (!ROLES.includes(role)) return { error: t.actions.badRole };
 
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
@@ -43,7 +45,7 @@ export async function createUser(
   if (error) {
     return {
       error: error.message.includes("already")
-        ? "Für diese E-Mail-Adresse besteht bereits ein Konto."
+        ? t.actions.emailExists
         : error.message,
     };
   }
@@ -52,7 +54,7 @@ export async function createUser(
   await admin.from("profiles").update({ full_name, role }).eq("id", data.user.id);
 
   revalidatePath("/benutzer");
-  return { success: `${full_name} wurde angelegt.` };
+  return { success: t.actions.userCreated(full_name) };
 }
 
 export async function updateUserRole(formData: FormData) {
@@ -84,19 +86,20 @@ export async function resetUserPassword(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const { t } = await getDict();
 
   const id = text(formData, "id");
   const password = text(formData, "password");
 
   if (password.length < 8) {
-    return { error: "Das Passwort muss mindestens 8 Zeichen lang sein." };
+    return { error: t.actions.passwordTooShort };
   }
 
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.updateUserById(id, { password });
 
   if (error) return { error: error.message };
-  return { success: "Passwort wurde neu gesetzt." };
+  return { success: t.actions.passwordReset };
 }
 
 export async function deleteUser(formData: FormData) {
@@ -118,9 +121,10 @@ export async function addPaymentSource(
   formData: FormData,
 ): Promise<ActionState> {
   await requireEditor();
+  const { t } = await getDict();
 
   const name = text(formData, "name");
-  if (!name) return { error: "Bitte eine Bezeichnung angeben." };
+  if (!name) return { error: t.actions.needLabel };
 
   const supabase = await createClient();
   const { error } = await supabase.from("payment_sources").insert({ name });
@@ -128,13 +132,13 @@ export async function addPaymentSource(
   if (error) {
     return {
       error: error.code === "23505"
-        ? "Diese Zahlungsquelle existiert bereits."
+        ? t.actions.sourceExists
         : error.message,
     };
   }
 
   revalidatePath("/einstellungen");
-  return { success: `„${name}" wurde hinzugefügt.` };
+  return { success: t.actions.added(name) };
 }
 
 export async function deletePaymentSource(formData: FormData) {
@@ -154,9 +158,10 @@ export async function addLocation(
   formData: FormData,
 ): Promise<ActionState> {
   await requireEditor();
+  const { t } = await getDict();
 
   const name = text(formData, "name");
-  if (!name) return { error: "Bitte eine Bezeichnung angeben." };
+  if (!name) return { error: t.actions.needLabel };
 
   const supabase = await createClient();
   const { error } = await supabase.from("locations").insert({ name, sort_order: 10 });
@@ -165,14 +170,14 @@ export async function addLocation(
     return {
       error:
         error.code === "23505"
-          ? "Diesen Standort gibt es bereits."
+          ? t.actions.locationExists
           : error.message,
     };
   }
 
   revalidatePath("/einstellungen");
   revalidatePath("/");
-  return { success: `„${name}" wurde hinzugefügt.` };
+  return { success: t.actions.added(name) };
 }
 
 export async function deleteLocation(formData: FormData) {

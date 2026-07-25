@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
+import { getDict } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = { error?: string; success?: string };
@@ -15,15 +16,17 @@ export async function signIn(
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("weiter") ?? "/") || "/";
 
+  const { t } = await getDict();
+
   if (!email || !password) {
-    return { error: "Bitte E-Mail und Passwort eingeben." };
+    return { error: t.login.missing };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: "E-Mail-Adresse oder Passwort ist falsch." };
+    return { error: t.login.wrong };
   }
 
   // Nur interne Ziele zulassen, damit die Rücksprung-URL nicht
@@ -42,15 +45,16 @@ export async function changePassword(
   formData: FormData,
 ): Promise<ActionState> {
   await requireProfile();
+  const { t } = await getDict();
 
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
   if (password.length < 8) {
-    return { error: "Das Passwort muss mindestens 8 Zeichen lang sein." };
+    return { error: t.actions.passwordTooShort };
   }
   if (password !== confirm) {
-    return { error: "Die beiden Passwörter stimmen nicht überein." };
+    return { error: t.actions.passwordMismatch };
   }
 
   const supabase = await createClient();
@@ -59,5 +63,5 @@ export async function changePassword(
   if (error) return { error: error.message };
 
   revalidatePath("/einstellungen");
-  return { success: "Passwort wurde geändert." };
+  return { success: t.actions.passwordChanged };
 }

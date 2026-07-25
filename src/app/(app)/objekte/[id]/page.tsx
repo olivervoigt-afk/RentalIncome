@@ -9,8 +9,9 @@ import TabNav from "@/components/tab-nav";
 import { Badge, Button, ButtonLink, Card, CardHeader } from "@/components/ui";
 import { deleteProperty, setArchived } from "@/lib/actions/properties";
 import { getProfile } from "@/lib/auth";
+import { formatters } from "@/lib/format";
+import { getDict } from "@/lib/i18n";
 import { getPaymentSources, getPropertyDetail } from "@/lib/queries";
-import { formatDate, formatEuro } from "@/lib/rent";
 
 const TABS = ["uebersicht", "zahlungen", "gutschriften", "dokumente", "historie"] as const;
 type Tab = (typeof TABS)[number];
@@ -30,11 +31,13 @@ export default async function PropertyDetailPage({
   const { id } = await params;
   const query = await searchParams;
 
-  const [profile, detail, sources] = await Promise.all([
+  const [profile, detail, sources, { t, locale }] = await Promise.all([
     getProfile(),
     getPropertyDetail(id),
     getPaymentSources(),
+    getDict(),
   ]);
+  const f = formatters(locale);
 
   if (!detail) notFound();
 
@@ -53,19 +56,19 @@ export default async function PropertyDetailPage({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/" className="text-sm text-muted hover:text-foreground">
-            ← Zum Dashboard
+            {t.property.backToDashboard}
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{property.name}</h1>
           <p className="mt-1 text-sm text-muted">
-            {location ?? "Kein Standort"}
-            {property.tenant_name && ` · Mieter: ${property.tenant_name}`}
+            {location ?? t.property.noLocation}
+            {property.tenant_name && t.property.tenantPrefix(property.tenant_name)}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {property.ta24 && <Badge tone="accent">TA24</Badge>}
-            {property.archived && <Badge>Archiviert</Badge>}
-            {summary.expired && <Badge>Vertrag abgelaufen</Badge>}
+            {property.archived && <Badge>{t.dashboard.archived}</Badge>}
+            {summary.expired && <Badge>{t.property.contractExpired}</Badge>}
             {summary.hasMissingRates && (
-              <Badge tone="negative">Für manche Termine fehlt eine Miete</Badge>
+              <Badge tone="negative">{t.property.missingRates}</Badge>
             )}
           </div>
         </div>
@@ -73,16 +76,16 @@ export default async function PropertyDetailPage({
         {canEdit && (
           <div className="flex items-center gap-2">
             <ButtonLink href={`/objekte/${property.id}?tab=zahlungen`}>
-              Zahlung erfassen
+              {t.property.recordPayment}
             </ButtonLink>
             <ButtonLink href={`/objekte/${property.id}/bearbeiten`} variant="secondary">
-              Bearbeiten
+              {t.common.edit}
             </ButtonLink>
             <form action={setArchived}>
               <input type="hidden" name="id" value={property.id} />
               <input type="hidden" name="archived" value={property.archived ? "0" : "1"} />
               <Button type="submit" variant="secondary">
-                {property.archived ? "Aus Archiv holen" : "Archivieren"}
+                {property.archived ? t.property.unarchive : t.property.archive}
               </Button>
             </form>
           </div>
@@ -91,14 +94,14 @@ export default async function PropertyDetailPage({
 
       {/* Kennzahlen — ebenfalls immer sichtbar */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Fällig bisher" value={formatEuro(summary.totalDue)} />
-        <Stat label="Erhalten" value={formatEuro(summary.totalReceived)} />
-        <Stat label="Gutschriften" value={formatEuro(summary.totalCredits)} />
+        <Stat label={t.dashboard.dueSoFar} value={f.euro(summary.totalDue)} />
+        <Stat label={t.dashboard.received} value={f.euro(summary.totalReceived)} />
+        <Stat label={t.dashboard.credits} value={f.euro(summary.totalCredits)} />
         <Stat
-          label="Saldo"
-          value={formatEuro(summary.balance)}
+          label={t.dashboard.balance}
+          value={f.euro(summary.balance)}
           tone={summary.balance < 0 ? "negative" : "positive"}
-          hint={summary.balance < 0 ? "Rückstand" : "Ausgeglichen bzw. im Voraus"}
+          hint={summary.balance < 0 ? t.property.arrears : t.property.settled}
         />
       </div>
 
@@ -106,18 +109,20 @@ export default async function PropertyDetailPage({
         active={tab}
         basePath={`/objekte/${property.id}`}
         items={[
-          { key: "uebersicht", label: "Übersicht" },
-          { key: "zahlungen", label: "Zahlungen", count: payments.length },
-          { key: "gutschriften", label: "Gutschriften", count: credits.length },
-          { key: "dokumente", label: "Dokumente", count: documents.length },
+          { key: "uebersicht", label: t.property.tabs.overview },
+          { key: "zahlungen", label: t.property.tabs.payments, count: payments.length },
+          { key: "gutschriften", label: t.property.tabs.credits, count: credits.length },
+          { key: "dokumente", label: t.property.tabs.documents, count: documents.length },
           ...(history.length > 0
-            ? [{ key: "historie", label: "Historie", count: history.length }]
+            ? [{ key: "historie", label: t.property.tabs.history, count: history.length }]
             : []),
         ]}
       />
 
       {tab === "uebersicht" && (
         <OverviewTab
+          t={t}
+          f={f}
           property={property}
           periods={periods}
           summary={summary}
@@ -127,6 +132,8 @@ export default async function PropertyDetailPage({
 
       {tab === "zahlungen" && (
         <PaymentsTab
+          t={t}
+          f={f}
           property={property}
           periods={periods}
           payments={payments}
@@ -139,11 +146,13 @@ export default async function PropertyDetailPage({
       )}
 
       {tab === "gutschriften" && (
-        <CreditsTab propertyId={property.id} credits={credits} canEdit={canEdit} />
+        <CreditsTab t={t} f={f} propertyId={property.id} credits={credits} canEdit={canEdit} />
       )}
 
       {tab === "dokumente" && (
         <DocumentsPanel
+          t={t}
+          f={f}
           propertyId={property.id}
           documents={documents}
           canEdit={canEdit}
@@ -153,25 +162,25 @@ export default async function PropertyDetailPage({
       {tab === "historie" && (
         <Card>
           <CardHeader
-            title="Vertragshistorie"
-            description="Änderungen an Mietbeginn und Laufzeit."
+            title={t.property.historyTitle}
+            description={t.property.historyHint}
           />
           <ul className="divide-y divide-border">
             {history.map((entry) => (
               <li key={entry.id} className="px-5 py-3 text-sm">
                 <span className="text-muted">
-                  {new Date(entry.changed_at).toLocaleString("de-DE")} ·{" "}
+                  {f.dateTime(entry.changed_at)} ·{" "}
                 </span>
                 {entry.old_start_date !== entry.new_start_date && (
                   <span>
-                    Beginn {formatDate(entry.old_start_date!)} →{" "}
-                    <strong>{formatDate(entry.new_start_date!)}</strong>{" "}
+                    {t.property.historyStart(f.date(entry.old_start_date!))}
+                    <strong>{f.date(entry.new_start_date!)}</strong>{" "}
                   </span>
                 )}
                 {entry.old_term_months !== entry.new_term_months && (
                   <span>
-                    Laufzeit {entry.old_term_months} →{" "}
-                    <strong>{entry.new_term_months} Monate</strong>
+                    {t.property.historyTerm(entry.old_term_months!)}
+                    <strong>{t.property.termMonths(entry.new_term_months!)}</strong>
                   </span>
                 )}
               </li>
@@ -184,19 +193,18 @@ export default async function PropertyDetailPage({
         <Card className="border-negative/30 px-5 py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="font-medium">Objekt löschen</p>
+              <p className="font-medium">{t.property.deleteTitle}</p>
               <p className="text-sm text-muted">
-                Entfernt das Objekt samt Mietstaffel, Zahlungen und Gutschriften
-                unwiderruflich. Zum reinen Ausblenden bitte archivieren.
+                {t.property.deleteHint}
               </p>
             </div>
             <DangerAction
               action={deleteProperty}
               fields={{ id: property.id }}
-              trigger="Endgültig löschen"
+              trigger={t.common.deleteFinally}
               triggerClassName="rounded-md border border-negative/40 px-3.5 py-2 text-sm font-medium text-negative transition-colors hover:bg-negative/10"
-              title={`${property.name} löschen?`}
-              description={`Das Objekt wird mit ${payments.length} Zahlungen, ${credits.length} Gutschriften, der kompletten Mietstaffel und allen Dokumenten entfernt.`}
+              title={t.property.deleteQuestion(property.name)}
+              description={t.property.deleteDetail(payments.length, credits.length)}
               confirmWord={property.name}
             />
           </div>

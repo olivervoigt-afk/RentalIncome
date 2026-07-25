@@ -4,6 +4,7 @@ import PropertyForm from "@/components/property-form";
 import { Card, CardHeader } from "@/components/ui";
 import { updateProperty } from "@/lib/actions/properties";
 import { requireProfile } from "@/lib/auth";
+import { getDict } from "@/lib/i18n";
 import { getLocations, getPropertyDetail } from "@/lib/queries";
 
 export default async function EditPropertyPage({
@@ -15,9 +16,10 @@ export default async function EditPropertyPage({
   const profile = await requireProfile();
   if (profile.role === "viewer") redirect(`/objekte/${id}`);
 
-  const [detail, locations] = await Promise.all([
+  const [detail, locations, { t }] = await Promise.all([
     getPropertyDetail(id),
     getLocations(),
+    getDict(),
   ]);
   if (!detail) notFound();
 
@@ -25,17 +27,17 @@ export default async function EditPropertyPage({
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <Link href={`/objekte/${id}`} className="text-sm text-muted hover:text-foreground">
-          ← Zurück zum Objekt
+          {t.form.backToProperty}
         </Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-          {detail.property.name} bearbeiten
+          {t.form.editSuffix(detail.property.name)}
         </h1>
       </div>
 
       <Card>
         <CardHeader
-          title="Stammdaten"
-          description="Änderungen an Mietbeginn oder Laufzeit werden in der Vertragshistorie festgehalten."
+          title={t.form.masterData}
+          description={t.form.masterHintEdit}
         />
         <div className="p-5">
           <PropertyForm

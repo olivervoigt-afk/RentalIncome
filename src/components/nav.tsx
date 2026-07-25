@@ -2,33 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LocaleSwitch from "@/components/locale-switch";
 import { signOut } from "@/lib/actions/auth";
-import { ROLE_LABELS, type Profile } from "@/lib/types";
+import type { Dict, Locale } from "@/lib/i18n/dictionaries";
+import type { Profile } from "@/lib/types";
 
-const LINKS = [
-  { href: "/", label: "Dashboard", exact: true },
-  { href: "/ta24", label: "TA24" },
-  { href: "/benutzer", label: "Benutzer", adminOnly: true },
-  { href: "/einstellungen", label: "Einstellungen" },
-];
-
-export default function Nav({ profile }: { profile: Profile }) {
+export default function Nav({
+  profile,
+  t,
+  locale,
+}: {
+  profile: Profile;
+  t: Dict;
+  locale: Locale;
+}) {
   const pathname = usePathname();
 
-  const visible = LINKS.filter((link) => {
-    if (link.adminOnly && profile.role !== "admin") return false;
-    return true;
-  });
+  const links = [
+    { href: "/", label: t.nav.dashboard, exact: true },
+    { href: "/ta24", label: t.nav.ta24 },
+    { href: "/benutzer", label: t.nav.users, adminOnly: true },
+    { href: "/einstellungen", label: t.nav.settings },
+  ].filter((link) => !link.adminOnly || profile.role === "admin");
 
   return (
     <header className="border-b border-border bg-surface">
       <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-6">
         <Link href="/" className="font-semibold tracking-tight">
-          Oylio Rental Dashboard
+          {t.app.name}
         </Link>
 
         <nav className="flex items-center gap-1">
-          {visible.map((link) => {
+          {links.map((link) => {
             const active = link.exact
               ? pathname === link.href
               : pathname.startsWith(link.href);
@@ -51,16 +56,21 @@ export default function Nav({ profile }: { profile: Profile }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-4">
+          <LocaleSwitch locale={locale} />
+
           <div className="text-right leading-tight">
-            <p className="text-sm font-medium">{profile.full_name || profile.email}</p>
-            <p className="text-xs text-muted">{ROLE_LABELS[profile.role]}</p>
+            <p className="text-sm font-medium">
+              {profile.full_name || profile.email}
+            </p>
+            <p className="text-xs text-muted">{t.roles[profile.role]}</p>
           </div>
+
           <form action={signOut}>
             <button
               type="submit"
               className="rounded-md px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
             >
-              Abmelden
+              {t.nav.signOut}
             </button>
           </form>
         </div>

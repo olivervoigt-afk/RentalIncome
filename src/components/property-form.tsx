@@ -11,7 +11,8 @@ import {
   Textarea,
 } from "@/components/ui";
 import type { ActionState } from "@/lib/actions/auth";
-import { FREQUENCY_LABELS, type Location, type Property } from "@/lib/types";
+import { useDict } from "@/components/dict-provider";
+import type { Location, Property } from "@/lib/types";
 
 type Action = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -27,6 +28,7 @@ export default function PropertyForm({
   /** Beim Anlegen kann direkt die erste Miete miterfasst werden. */
   showInitialRent?: boolean;
 }) {
+  const { t } = useDict();
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     action,
     {},
@@ -37,16 +39,16 @@ export default function PropertyForm({
       {property && <input type="hidden" name="id" value={property.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Objektname">
+        <Field label={t.form.name}>
           <Input name="name" required defaultValue={property?.name} autoFocus />
         </Field>
 
         <Field
-          label="Standort"
-          hint="Weitere Standorte legt der Administrator in den Einstellungen an."
+          label={t.form.location}
+          hint={t.form.locationHint}
         >
           <Select name="location_id" defaultValue={property?.location_id ?? ""}>
-            <option value="">Ohne Standort</option>
+            <option value="">{t.form.noLocation}</option>
             {locations
               .filter((l) => l.active || l.id === property?.location_id)
               .map((l) => (
@@ -57,16 +59,16 @@ export default function PropertyForm({
           </Select>
         </Field>
 
-        <Field label="Mieter">
+        <Field label={t.form.tenant}>
           <Input name="tenant_name" defaultValue={property?.tenant_name} />
         </Field>
 
-        <Field label="Zahlungsrhythmus">
+        <Field label={t.form.frequency}>
           <Select
             name="payment_frequency"
             defaultValue={property?.payment_frequency ?? "monthly"}
           >
-            {Object.entries(FREQUENCY_LABELS).map(([value, label]) => (
+            {Object.entries(t.frequency).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
@@ -75,8 +77,8 @@ export default function PropertyForm({
         </Field>
 
         <Field
-          label="Mietbeginn"
-          hint="Bestimmt zugleich den Fälligkeitstag jeder Rate."
+          label={t.form.start}
+          hint={t.form.startHint}
         >
           <Input
             name="start_date"
@@ -86,7 +88,7 @@ export default function PropertyForm({
           />
         </Field>
 
-        <Field label="Laufzeit in Monaten">
+        <Field label={t.form.term}>
           <Input
             name="term_months"
             type="number"
@@ -99,15 +101,15 @@ export default function PropertyForm({
 
         {showInitialRent && (
           <Field
-            label="Miete pro Zahlungszeitraum (€)"
-            hint="Optional. Weitere Zeiträume kannst du danach als Staffel ergänzen."
+            label={t.form.initialRent}
+            hint={t.form.initialRentHint}
           >
             <Input name="amount" inputMode="decimal" placeholder="1250,00" />
           </Field>
         )}
       </div>
 
-      <Field label="Notizen">
+      <Field label={t.form.notes}>
         <Textarea name="notes" rows={3} defaultValue={property?.notes} />
       </Field>
 
@@ -119,8 +121,8 @@ export default function PropertyForm({
           className="size-4 rounded border-border accent-accent"
         />
         <span>
-          <span className="font-medium">TA24</span>
-          <span className="text-muted"> — relevant für die Steuererklärung in Malta</span>
+          <span className="font-medium">{t.form.ta24Label}</span>
+          <span className="text-muted">{t.form.ta24Hint}</span>
         </span>
       </label>
 
@@ -128,13 +130,13 @@ export default function PropertyForm({
 
       <div className="flex gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "Wird gespeichert …" : property ? "Änderungen speichern" : "Objekt anlegen"}
+          {pending ? t.common.saving : property ? t.form.saveChanges : t.form.create}
         </Button>
         <ButtonLink
-          href={property ? `/objekte/${property.id}` : "/objekte"}
+          href={property ? `/objekte/${property.id}` : "/"}
           variant="secondary"
         >
-          Abbrechen
+          {t.common.cancel}
         </ButtonLink>
       </div>
     </form>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireEditor } from "@/lib/auth";
+import { getDict } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import type { PaymentFrequency } from "@/lib/types";
 import type { ActionState } from "./auth";
@@ -38,18 +39,20 @@ type PropertyInput = {
   notes: string;
 };
 
-function readProperty(formData: FormData): PropertyInput | string {
+type Messages = Awaited<ReturnType<typeof getDict>>["t"]["actions"];
+
+function readProperty(formData: FormData, m: Messages): PropertyInput | string {
   const name = text(formData, "name");
   const start_date = text(formData, "start_date");
   const term_months = Number(text(formData, "term_months"));
   const frequency = text(formData, "payment_frequency") as PaymentFrequency;
 
-  if (!name) return "Bitte einen Objektnamen angeben.";
-  if (!start_date) return "Bitte den Mietbeginn angeben.";
+  if (!name) return m.needName;
+  if (!start_date) return m.needStart;
   if (!Number.isInteger(term_months) || term_months < 1) {
-    return "Die Laufzeit muss eine ganze Zahl von mindestens 1 Monat sein.";
+    return m.needTerm;
   }
-  if (!FREQUENCIES.includes(frequency)) return "Ungültiger Zahlungsrhythmus.";
+  if (!FREQUENCIES.includes(frequency)) return m.badFrequency;
 
   return {
     name,
@@ -68,8 +71,9 @@ export async function createProperty(
   formData: FormData,
 ): Promise<ActionState> {
   await requireEditor();
+  const { t } = await getDict();
 
-  const input = readProperty(formData);
+  const input = readProperty(formData, t.actions);
   if (typeof input === "string") return { error: input };
 
   const supabase = await createClient();
@@ -103,8 +107,9 @@ export async function updateProperty(
 ): Promise<ActionState> {
   await requireEditor();
 
+  const { t } = await getDict();
   const id = text(formData, "id");
-  const input = readProperty(formData);
+  const input = readProperty(formData, t.actions);
   if (typeof input === "string") return { error: input };
 
   const supabase = await createClient();
@@ -120,9 +125,7 @@ export async function updateProperty(
   if (error) return { error: error.message };
   if (!data?.length) {
     return {
-      error:
-        "Es wurde nichts gespeichert — das Objekt existiert nicht mehr oder " +
-        "die Seite ist veraltet. Bitte die Seite neu laden.",
+      error: t.actions.nothingSaved,
     };
   }
 
@@ -130,7 +133,7 @@ export async function updateProperty(
 
   revalidatePath(`/objekte/${id}`);
   revalidatePath(`/objekte/${id}/bearbeiten`);
-  return { success: "Änderungen gespeichert." };
+  return { success: t.actions.saved };
 }
 
 export async function setArchived(formData: FormData) {
@@ -166,18 +169,19 @@ export async function addRentPeriod(
   formData: FormData,
 ): Promise<ActionState> {
   await requireEditor();
+  const { t } = await getDict();
 
   const property_id = text(formData, "property_id");
   const valid_from = text(formData, "valid_from");
   const valid_to = text(formData, "valid_to") || null;
   const amount = number(formData, "amount");
 
-  if (!valid_from) return { error: "Bitte ein Startdatum angeben." };
+  if (!valid_from) return { error: t.actions.needStartDate };
   if (!Number.isFinite(amount) || amount < 0) {
-    return { error: "Bitte einen gültigen Mietbetrag angeben." };
+    return { error: t.actions.needRent };
   }
   if (valid_to && valid_to < valid_from) {
-    return { error: "Das Enddatum liegt vor dem Startdatum." };
+    return { error: t.actions.endBeforeStart };
   }
 
   const supabase = await createClient();
@@ -189,7 +193,7 @@ export async function addRentPeriod(
 
   revalidatePath("/");
   revalidatePath(`/objekte/${property_id}`);
-  return { success: "Mietzeitraum hinzugefügt." };
+  return { success: t.actions.periodAdded };
 }
 
 export async function deleteRentPeriod(formData: FormData) {
@@ -212,15 +216,16 @@ export async function addPayment(
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await requireEditor();
+  const { t } = await getDict();
 
   const property_id = text(formData, "property_id");
   const paid_on = text(formData, "paid_on");
   const amount = number(formData, "amount");
   const source_id = text(formData, "source_id") || null;
 
-  if (!paid_on) return { error: "Bitte das Zahlungsdatum angeben." };
+  if (!paid_on) return { error: t.actions.needPaymentDate };
   if (!Number.isFinite(amount) || amount === 0) {
-    return { error: "Bitte einen gültigen Betrag angeben." };
+    return { error: t.actions.needAmount };
   }
 
   const supabase = await createClient();
@@ -237,7 +242,7 @@ export async function addPayment(
 
   revalidatePath("/");
   revalidatePath(`/objekte/${property_id}`);
-  return { success: "Zahlung erfasst." };
+  return { success: t.actions.paymentAdded };
 }
 
 export async function deletePayment(formData: FormData) {
@@ -260,14 +265,15 @@ export async function addCredit(
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await requireEditor();
+  const { t } = await getDict();
 
   const property_id = text(formData, "property_id");
   const credited_on = text(formData, "credited_on");
   const amount = number(formData, "amount");
 
-  if (!credited_on) return { error: "Bitte das Datum angeben." };
+  if (!credited_on) return { error: t.actions.needDate };
   if (!Number.isFinite(amount) || amount === 0) {
-    return { error: "Bitte einen gültigen Betrag angeben." };
+    return { error: t.actions.needAmount };
   }
 
   const supabase = await createClient();
@@ -283,7 +289,7 @@ export async function addCredit(
 
   revalidatePath("/");
   revalidatePath(`/objekte/${property_id}`);
-  return { success: "Gutschrift erfasst." };
+  return { success: t.actions.creditAdded };
 }
 
 export async function deleteCredit(formData: FormData) {
@@ -306,15 +312,16 @@ export async function uploadDocument(
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await requireEditor();
+  const { t } = await getDict();
 
   const property_id = text(formData, "property_id");
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Bitte eine Datei auswählen." };
+    return { error: t.actions.needFile };
   }
   if (file.size > 20 * 1024 * 1024) {
-    return { error: "Die Datei ist grösser als 20 MB." };
+    return { error: t.actions.fileTooBig };
   }
 
   const supabase = await createClient();
@@ -338,7 +345,7 @@ export async function uploadDocument(
   if (error) return { error: error.message };
 
   revalidatePath(`/objekte/${property_id}`);
-  return { success: "Dokument hochgeladen." };
+  return { success: t.actions.uploaded };
 }
 
 export async function deleteDocument(formData: FormData) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useDict } from "@/components/dict-provider";
 
 /**
  * Löschaktion mit Rückfrage in einem eigenen Dialog.
@@ -17,7 +18,7 @@ export default function DangerAction({
   trigger,
   title,
   description,
-  confirmLabel = "Endgültig löschen",
+  confirmLabel,
   confirmWord,
   triggerClassName = "",
 }: {
@@ -30,6 +31,7 @@ export default function DangerAction({
   confirmWord?: string;
   triggerClassName?: string;
 }) {
+  const { t } = useDict();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
 
@@ -73,14 +75,13 @@ export default function DangerAction({
             <p className="mt-2 text-sm text-muted">{description}</p>
 
             <p className="mt-3 rounded-md border border-negative/30 bg-negative/10 px-3 py-2 text-sm text-negative">
-              Diese Aktion kann nicht rückgängig gemacht werden. Die Daten sind
-              anschliessend endgültig verloren.
+              {t.common.irreversible}
             </p>
 
             {confirmWord && (
               <label className="mt-4 block">
                 <span className="mb-1.5 block text-sm">
-                  Tippe zur Bestätigung <strong>{confirmWord}</strong> ein:
+                  {t.common.confirmType(confirmWord)}
                 </span>
                 <input
                   autoFocus
@@ -97,14 +98,16 @@ export default function DangerAction({
                 onClick={close}
                 className="rounded-md border border-border px-3.5 py-2 text-sm font-medium transition-colors hover:bg-surface-muted"
               >
-                Abbrechen
+                {t.common.cancel}
               </button>
 
               <form action={action}>
                 {Object.entries(fields).map(([name, value]) => (
                   <input key={name} type="hidden" name={name} value={value} />
                 ))}
-                <SubmitButton disabled={!ready}>{confirmLabel}</SubmitButton>
+                <SubmitButton disabled={!ready} label={t.common.deleting}>
+                  {confirmLabel ?? t.common.deleteFinally}
+                </SubmitButton>
               </form>
             </div>
           </div>
@@ -116,9 +119,11 @@ export default function DangerAction({
 
 function SubmitButton({
   disabled,
+  label,
   children,
 }: {
   disabled: boolean;
+  label: string;
   children: React.ReactNode;
 }) {
   const { pending } = useFormStatus();
@@ -131,7 +136,7 @@ function SubmitButton({
       disabled={disabled || pending}
       className="rounded-md bg-negative px-3.5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
     >
-      {pending ? "Wird gelöscht …" : children}
+      {pending ? label : children}
     </button>
   );
 }

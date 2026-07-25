@@ -9,8 +9,8 @@ import {
   deletePaymentSource,
 } from "@/lib/actions/users";
 import { requireProfile } from "@/lib/auth";
+import { getDict } from "@/lib/i18n";
 import { getLocations, getPaymentSources } from "@/lib/queries";
-import { ROLE_LABELS } from "@/lib/types";
 
 export const metadata = { title: "Einstellungen" };
 
@@ -18,29 +18,30 @@ export default async function SettingsPage() {
   const profile = await requireProfile();
   const canEdit = profile.role !== "viewer";
 
+  const { t } = await getDict();
   const [sources, locations] = canEdit
     ? await Promise.all([getPaymentSources(), getLocations()])
     : [[], []];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Einstellungen</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t.settings.title}</h1>
 
       <Card>
-        <CardHeader title="Mein Konto" />
+        <CardHeader title={t.settings.account} />
         <dl className="space-y-3 px-5 py-4 text-sm">
           <div className="flex justify-between">
-            <dt className="text-muted">Name</dt>
-            <dd className="font-medium">{profile.full_name || "—"}</dd>
+            <dt className="text-muted">{t.settings.name}</dt>
+            <dd className="font-medium">{profile.full_name || t.common.none}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted">E-Mail</dt>
+            <dt className="text-muted">{t.settings.email}</dt>
             <dd className="font-medium">{profile.email}</dd>
           </div>
           <div className="flex items-center justify-between">
-            <dt className="text-muted">Rolle</dt>
+            <dt className="text-muted">{t.settings.role}</dt>
             <dd>
-              <Badge tone="accent">{ROLE_LABELS[profile.role]}</Badge>
+              <Badge tone="accent">{t.roles[profile.role]}</Badge>
             </dd>
           </div>
         </dl>
@@ -48,8 +49,8 @@ export default async function SettingsPage() {
 
       <Card>
         <CardHeader
-          title="Passwort ändern"
-          description="Gilt sofort für die nächste Anmeldung."
+          title={t.settings.changePassword}
+          description={t.settings.changePasswordHint}
         />
         <div className="p-5">
           <ChangePasswordForm />
@@ -59,8 +60,8 @@ export default async function SettingsPage() {
       {canEdit && (
         <Card>
           <CardHeader
-            title="Standorte"
-            description="Auswahlmöglichkeiten im Objektformular. Das Dashboard gruppiert danach."
+            title={t.settings.locations}
+            description={t.settings.locationsHint}
           />
 
           <ul className="divide-y divide-border">
@@ -73,18 +74,18 @@ export default async function SettingsPage() {
                 <DangerAction
                   action={deleteLocation}
                   fields={{ id: location.id }}
-                  trigger="Löschen"
-                  title="Standort löschen?"
-                  description={`„${location.name}" steht künftig nicht mehr zur Auswahl. Objekte mit diesem Standort behalten alle Daten und erscheinen dann unter „Ohne Standort".`}
+                  trigger={t.common.delete}
+                  title={t.settings.deleteLocation}
+                  description={t.settings.deleteLocationDetail(location.name)}
                 />
               </li>
             ))}
           </ul>
 
           <div className="border-t border-border bg-surface-muted/40 p-5">
-            <InlineForm action={addLocation} submitLabel="Hinzufügen">
-              <Field label="Neuer Standort">
-                <Input name="name" required placeholder="z. B. Österreich" />
+            <InlineForm action={addLocation} submitLabel={t.common.add}>
+              <Field label={t.settings.newLocation}>
+                <Input name="name" required placeholder={t.settings.locationPlaceholder} />
               </Field>
             </InlineForm>
           </div>
@@ -94,8 +95,8 @@ export default async function SettingsPage() {
       {canEdit && (
         <Card>
           <CardHeader
-            title="Zahlungsquellen"
-            description="Auswahlmöglichkeiten beim Erfassen eines Zahlungseingangs."
+            title={t.settings.sources}
+            description={t.settings.sourcesHint}
           />
 
           <ul className="divide-y divide-border">
@@ -108,18 +109,18 @@ export default async function SettingsPage() {
                 <DangerAction
                   action={deletePaymentSource}
                   fields={{ id: source.id }}
-                  trigger="Löschen"
-                  title="Zahlungsquelle löschen?"
-                  description={`„${source.name}" steht künftig nicht mehr zur Auswahl. Bereits erfasste Zahlungen behalten ihren Betrag, verlieren aber die Quellenangabe.`}
+                  trigger={t.common.delete}
+                  title={t.settings.deleteSource}
+                  description={t.settings.deleteSourceDetail(source.name)}
                 />
               </li>
             ))}
           </ul>
 
           <div className="border-t border-border bg-surface-muted/40 p-5">
-            <InlineForm action={addPaymentSource} submitLabel="Hinzufügen">
-              <Field label="Neue Zahlungsquelle">
-                <Input name="name" required placeholder="z. B. Überweisung Malta" />
+            <InlineForm action={addPaymentSource} submitLabel={t.common.add}>
+              <Field label={t.settings.newSource}>
+                <Input name="name" required placeholder={t.settings.sourcePlaceholder} />
               </Field>
             </InlineForm>
           </div>

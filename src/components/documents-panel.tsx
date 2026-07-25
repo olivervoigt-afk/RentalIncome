@@ -3,6 +3,8 @@ import DocumentLink from "@/components/document-link";
 import InlineForm from "@/components/inline-form";
 import { Card, CardHeader, Field, Input } from "@/components/ui";
 import { deleteDocument, uploadDocument } from "@/lib/actions/properties";
+import type { Formatters } from "@/lib/format";
+import type { Dict } from "@/lib/i18n/dictionaries";
 import type { PropertyDocument } from "@/lib/types";
 
 function formatSize(bytes: number | null): string {
@@ -12,10 +14,14 @@ function formatSize(bytes: number | null): string {
 }
 
 export default function DocumentsPanel({
+  t,
+  f,
   propertyId,
   documents,
   canEdit,
 }: {
+  t: Dict;
+  f: Formatters;
   propertyId: string;
   documents: PropertyDocument[];
   canEdit: boolean;
@@ -23,12 +29,12 @@ export default function DocumentsPanel({
   return (
     <Card>
       <CardHeader
-        title="Dokumente"
-        description="Mietverträge und andere Unterlagen zu diesem Objekt."
+        title={t.property.documentsTitle}
+        description={t.property.documentsHint}
       />
 
       {documents.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-muted">Keine Dokumente hinterlegt.</p>
+        <p className="px-5 py-6 text-sm text-muted">{t.property.noDocuments}</p>
       ) : (
         <ul className="divide-y divide-border">
           {documents.map((doc) => (
@@ -36,7 +42,7 @@ export default function DocumentsPanel({
               <div className="min-w-0 text-sm">
                 <DocumentLink path={doc.storage_path} name={doc.file_name} />
                 <p className="text-muted">
-                  {new Date(doc.uploaded_at).toLocaleDateString("de-DE")}
+                  {f.date(new Date(doc.uploaded_at))}
                   {doc.size_bytes ? ` · ${formatSize(doc.size_bytes)}` : ""}
                 </p>
               </div>
@@ -48,9 +54,9 @@ export default function DocumentsPanel({
                     property_id: propertyId,
                     storage_path: doc.storage_path,
                   }}
-                  trigger="Löschen"
-                  title="Dokument löschen?"
-                  description={`„${doc.file_name}" wird aus dem Speicher entfernt.`}
+                  trigger={t.common.delete}
+                  title={t.documents.deleteTitle}
+                  description={t.documents.deleteDetail(doc.file_name)}
                 />
               )}
             </li>
@@ -60,9 +66,9 @@ export default function DocumentsPanel({
 
       {canEdit && (
         <div className="border-t border-border bg-surface-muted/40 p-5">
-          <InlineForm action={uploadDocument} submitLabel="Hochladen">
+          <InlineForm action={uploadDocument} submitLabel={t.property.upload}>
             <input type="hidden" name="property_id" value={propertyId} />
-            <Field label="Datei auswählen" hint="PDF oder Bild, maximal 20 MB.">
+            <Field label={t.property.chooseFile} hint={t.property.fileHint}>
               <Input
                 name="file"
                 type="file"

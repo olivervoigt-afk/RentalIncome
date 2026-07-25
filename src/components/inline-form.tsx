@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, type ReactNode } from "react";
 import { Button, FormMessage } from "@/components/ui";
+import { useDict } from "@/components/dict-provider";
 import type { ActionState } from "@/lib/actions/auth";
 
 type Action = (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -22,6 +23,7 @@ export default function InlineForm({
   children: ReactNode;
   className?: string;
 }) {
+  const { t } = useDict();
   const ref = useRef<HTMLFormElement>(null);
 
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
@@ -38,7 +40,7 @@ export default function InlineForm({
       {children}
       <FormMessage state={state} />
       <Button type="submit" disabled={pending} variant="secondary">
-        {pending ? "Wird gespeichert …" : submitLabel}
+        {pending ? t.common.saving : submitLabel}
       </Button>
     </form>
   );

@@ -2,15 +2,21 @@ import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
 import { Card, CardHeader, Field, Input } from "@/components/ui";
 import { addRentPeriod, deleteRentPeriod } from "@/lib/actions/properties";
-import { formatDate, formatEuro, type PropertySummary } from "@/lib/rent";
-import { FREQUENCY_LABELS, type Property, type RentPeriod } from "@/lib/types";
+import type { Formatters } from "@/lib/format";
+import type { Dict } from "@/lib/i18n/dictionaries";
+import type { PropertySummary } from "@/lib/rent";
+import type { Property, RentPeriod } from "@/lib/types";
 
 export default function OverviewTab({
+  t,
+  f,
   property,
   periods,
   summary,
   canEdit,
 }: {
+  t: Dict;
+  f: Formatters;
   property: Property;
   periods: RentPeriod[];
   summary: PropertySummary;
@@ -20,27 +26,27 @@ export default function OverviewTab({
     <div className="space-y-6">
       <Card className="px-5 py-4">
         <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          <Detail label="Mietbeginn" value={formatDate(property.start_date)} />
-          <Detail label="Vertragsende" value={formatDate(summary.contractEnd)} />
+          <Detail label={t.property.start} value={f.date(property.start_date)} />
+          <Detail label={t.property.end} value={f.date(summary.contractEnd)} />
           <Detail
-            label="Restlaufzeit"
+            label={t.property.remaining}
             value={
               summary.remainingMonths > 0
-                ? `${summary.remainingMonths} Monate`
-                : "Abgelaufen"
+                ? t.property.remainingMonths(summary.remainingMonths)
+                : t.property.expired
             }
           />
-          <Detail label="Laufzeit gesamt" value={`${property.term_months} Monate`} />
+          <Detail label={t.property.termTotal} value={t.property.termMonths(property.term_months)} />
           <Detail
-            label="Zahlungsrhythmus"
-            value={FREQUENCY_LABELS[property.payment_frequency]}
+            label={t.property.frequency}
+            value={t.frequency[property.payment_frequency]}
           />
-          <Detail label="Vertragsvolumen" value={formatEuro(summary.totalContract)} />
+          <Detail label={t.property.volume} value={f.euro(summary.totalContract)} />
         </dl>
 
         {property.notes && (
           <div className="mt-4 border-t border-border pt-4">
-            <p className="text-sm text-muted">Notizen</p>
+            <p className="text-sm text-muted">{t.property.notes}</p>
             <p className="mt-1 whitespace-pre-wrap text-sm">{property.notes}</p>
           </div>
         )}
@@ -48,13 +54,13 @@ export default function OverviewTab({
 
       <Card>
         <CardHeader
-          title="Mietstaffel"
-          description="Zeiträume mit unterschiedlicher Miete. Der Betrag gilt je Zahlungszeitraum."
+          title={t.property.rentSteps}
+          description={t.property.rentStepsHint}
         />
 
         {periods.length === 0 ? (
           <p className="px-5 py-6 text-sm text-muted">
-            Noch keine Miete hinterlegt — ohne Eintrag bleibt die Forderung bei 0 €.
+            {t.property.noRent}
           </p>
         ) : (
           <ul className="divide-y divide-border">
@@ -65,20 +71,21 @@ export default function OverviewTab({
               >
                 <div className="text-sm">
                   <p className="tabular font-medium">
-                    {formatEuro(Number(period.amount))}
+                    {f.euro(Number(period.amount))}
                   </p>
                   <p className="text-muted">
-                    ab {formatDate(period.valid_from)}
-                    {period.valid_to ? ` bis ${formatDate(period.valid_to)}` : " (offen)"}
+                    {period.valid_to
+                      ? t.property.fromTo(f.date(period.valid_from), f.date(period.valid_to))
+                      : t.property.fromOpen(f.date(period.valid_from))}
                   </p>
                 </div>
                 {canEdit && (
                   <DangerAction
                     action={deleteRentPeriod}
                     fields={{ id: period.id, property_id: property.id }}
-                    trigger="Löschen"
-                    title="Mietzeitraum löschen?"
-                    description={`${formatEuro(Number(period.amount))} ab ${formatDate(period.valid_from)} wird entfernt. Der Saldo wird neu berechnet.`}
+                    trigger={t.common.delete}
+                    title={t.property.rentSteps}
+                    description={`${f.euro(Number(period.amount))} — ${t.property.fromOpen(f.date(period.valid_from))}`}
                   />
                 )}
               </li>
@@ -88,10 +95,10 @@ export default function OverviewTab({
 
         {canEdit && (
           <div className="border-t border-border bg-surface-muted/40 p-5">
-            <InlineForm action={addRentPeriod} submitLabel="Zeitraum hinzufügen">
+            <InlineForm action={addRentPeriod} submitLabel={t.property.addPeriod}>
               <input type="hidden" name="property_id" value={property.id} />
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Gültig ab">
+                <Field label={t.property.validFrom}>
                   <Input
                     name="valid_from"
                     type="date"
@@ -99,10 +106,10 @@ export default function OverviewTab({
                     defaultValue={property.start_date}
                   />
                 </Field>
-                <Field label="Gültig bis" hint="Leer lassen für offenes Ende.">
+                <Field label={t.property.validTo} hint={t.property.openEnd}>
                   <Input name="valid_to" type="date" />
                 </Field>
-                <Field label="Betrag (€)">
+                <Field label={t.common.amount}>
                   <Input name="amount" inputMode="decimal" required placeholder="1250,00" />
                 </Field>
               </div>

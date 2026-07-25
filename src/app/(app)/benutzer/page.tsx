@@ -6,8 +6,8 @@ import ResetPasswordForm from "@/components/reset-password-form";
 import { Badge, Card, CardHeader, Field, Input, Select } from "@/components/ui";
 import { createUser, deleteUser } from "@/lib/actions/users";
 import { requireProfile } from "@/lib/auth";
+import { getDict } from "@/lib/i18n";
 import { getProfiles } from "@/lib/queries";
-import { ROLE_LABELS } from "@/lib/types";
 
 export const metadata = { title: "Benutzer" };
 
@@ -15,28 +15,27 @@ export default async function UsersPage() {
   const me = await requireProfile();
   if (me.role !== "admin") redirect("/");
 
-  const profiles = await getProfiles();
+  const [profiles, { t }] = await Promise.all([getProfiles(), getDict()]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Benutzer</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.users.title}</h1>
         <p className="mt-1 text-sm text-muted">
-          Administratoren verwalten alles, Bearbeiter pflegen Objekte und
-          Zahlungen, Leser haben nur Einsicht.
+          {t.users.intro}
         </p>
       </div>
 
       <Card>
-        <CardHeader title="Konten" description={`${profiles.length} Benutzer`} />
+        <CardHeader title={t.users.accounts} description={t.users.count(profiles.length)} />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                <th className="px-5 py-3 font-medium">Name</th>
-                <th className="px-5 py-3 font-medium">E-Mail</th>
-                <th className="px-5 py-3 font-medium">Rolle</th>
-                <th className="px-5 py-3 font-medium">Passwort zurücksetzen</th>
+                <th className="px-5 py-3 font-medium">{t.users.name}</th>
+                <th className="px-5 py-3 font-medium">{t.users.email}</th>
+                <th className="px-5 py-3 font-medium">{t.users.role}</th>
+                <th className="px-5 py-3 font-medium">{t.users.resetPassword}</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -44,17 +43,17 @@ export default async function UsersPage() {
               {profiles.map((profile) => (
                 <tr key={profile.id} className="border-b border-border/60 last:border-0">
                   <td className="px-5 py-3 font-medium">
-                    {profile.full_name || "—"}
+                    {profile.full_name || t.common.none}
                     {profile.id === me.id && (
                       <Badge tone="accent">
-                        <span className="ml-1">Du</span>
+                        <span className="ml-1">{t.users.you}</span>
                       </Badge>
                     )}
                   </td>
                   <td className="px-5 py-3 text-muted">{profile.email}</td>
                   <td className="px-5 py-3">
                     {profile.id === me.id ? (
-                      <span>{ROLE_LABELS[profile.role]}</span>
+                      <span>{t.roles[profile.role]}</span>
                     ) : (
                       <RoleSelect id={profile.id} role={profile.role} />
                     )}
@@ -67,9 +66,9 @@ export default async function UsersPage() {
                       <DangerAction
                         action={deleteUser}
                         fields={{ id: profile.id }}
-                        trigger="Löschen"
-                        title="Benutzerkonto löschen?"
-                        description={`${profile.full_name || profile.email} verliert den Zugang. Erfasste Zahlungen bleiben erhalten.`}
+                        trigger={t.common.delete}
+                        title={t.users.deleteTitle}
+                        description={t.users.deleteDetail(profile.full_name || profile.email)}
                       />
                     )}
                   </td>
@@ -82,26 +81,26 @@ export default async function UsersPage() {
 
       <Card>
         <CardHeader
-          title="Benutzer anlegen"
-          description="Der Benutzer meldet sich mit dem Basispasswort an und kann es danach selbst ändern."
+          title={t.users.createTitle}
+          description={t.users.createHint}
         />
         <div className="p-5">
-          <InlineForm action={createUser} submitLabel="Benutzer anlegen">
+          <InlineForm action={createUser} submitLabel={t.users.create}>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Vollständiger Name">
+              <Field label={t.users.fullName}>
                 <Input name="full_name" required />
               </Field>
-              <Field label="E-Mail-Adresse">
+              <Field label={t.users.email}>
                 <Input name="email" type="email" required />
               </Field>
-              <Field label="Basispasswort" hint="Mindestens 8 Zeichen.">
+              <Field label={t.users.basePassword} hint={t.users.minChars}>
                 <Input name="password" type="text" required minLength={8} />
               </Field>
-              <Field label="Rolle">
+              <Field label={t.users.role}>
                 <Select name="role" defaultValue="viewer">
-                  <option value="viewer">Leser</option>
-                  <option value="editor">Bearbeiter</option>
-                  <option value="admin">Administrator</option>
+                  <option value="viewer">{t.roles.viewer}</option>
+                  <option value="editor">{t.roles.editor}</option>
+                  <option value="admin">{t.roles.admin}</option>
                 </Select>
               </Field>
             </div>

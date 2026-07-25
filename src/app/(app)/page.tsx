@@ -2,9 +2,9 @@ import Link from "next/link";
 import ArchiveToggle from "@/components/archive-toggle";
 import { Badge, ButtonLink, Card, EmptyState } from "@/components/ui";
 import { getProfile } from "@/lib/auth";
+import { formatters } from "@/lib/format";
+import { getDict } from "@/lib/i18n";
 import { getPropertiesWithSummary, type PropertyWithSummary } from "@/lib/queries";
-import { formatDate, formatEuro } from "@/lib/rent";
-import { NO_LOCATION } from "@/lib/types";
 
 export const metadata = { title: "Dashboard" };
 
@@ -30,10 +30,13 @@ export default async function DashboardPage({
   const { archiv } = await searchParams;
   const showArchived = archiv === "1";
 
-  const [profile, all] = await Promise.all([
+  const [profile, all, { t, locale }] = await Promise.all([
     getProfile(),
     getPropertiesWithSummary(),
+    getDict(),
   ]);
+  const f = formatters(locale);
+  const NO_LOCATION = t.dashboard.noLocation;
 
   const canEdit = profile?.role !== "viewer";
   const hidden = all.filter((p) => p.archived || p.summary.expired);
@@ -61,44 +64,44 @@ export default async function DashboardPage({
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.dashboard.title}</h1>
           <p className="mt-1 text-sm text-muted">
-            {rows.length} {rows.length === 1 ? "Objekt" : "Objekte"}
-            {orderedGroups.length > 1 && ` in ${orderedGroups.length} Standorten`}
-            {hidden.length > 0 && !showArchived && ` · ${hidden.length} ausgeblendet`}
+            {t.dashboard.countProperties(rows.length)}
+            {orderedGroups.length > 1 && t.dashboard.inLocations(orderedGroups.length)}
+            {hidden.length > 0 && !showArchived && t.dashboard.hiddenCount(hidden.length)}
           </p>
         </div>
-        {canEdit && <ButtonLink href="/objekte/neu">Objekt anlegen</ButtonLink>}
+        {canEdit && <ButtonLink href="/objekte/neu">{t.dashboard.newProperty}</ButtonLink>}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Fällig bisher" value={formatEuro(totals.due)} />
-        <StatCard label="Erhalten" value={formatEuro(totals.received)} />
-        <StatCard label="Gutschriften" value={formatEuro(totals.credits)} />
+        <StatCard label={t.dashboard.dueSoFar} value={f.euro(totals.due)} />
+        <StatCard label={t.dashboard.received} value={f.euro(totals.received)} />
+        <StatCard label={t.dashboard.credits} value={f.euro(totals.credits)} />
         <StatCard
-          label="Saldo"
-          value={formatEuro(totals.balance)}
+          label={t.dashboard.balance}
+          value={f.euro(totals.balance)}
           tone={totals.balance < 0 ? "negative" : "positive"}
         />
       </div>
 
       <Card>
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <h2 className="text-base font-semibold">Objektübersicht</h2>
+          <h2 className="text-base font-semibold">{t.dashboard.overview}</h2>
           <ArchiveToggle active={showArchived} count={hidden.length} />
         </div>
 
         {rows.length === 0 ? (
           <EmptyState
-            title={all.length === 0 ? "Noch keine Objekte angelegt" : "Keine aktiven Objekte"}
+            title={all.length === 0 ? t.dashboard.emptyTitle : t.dashboard.emptyNoActive}
             description={
               all.length === 0
-                ? "Lege dein erstes Objekt an."
-                : "Alle Objekte sind archiviert oder ihre Verträge sind abgelaufen."
+                ? t.dashboard.emptyHint
+                : t.dashboard.emptyArchivedHint
             }
             action={
               canEdit && all.length === 0 ? (
-                <ButtonLink href="/objekte/neu">Objekt anlegen</ButtonLink>
+                <ButtonLink href="/objekte/neu">{t.dashboard.newProperty}</ButtonLink>
               ) : null
             }
           />
@@ -108,13 +111,13 @@ export default async function DashboardPage({
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="w-[30%] min-w-[240px] px-5 py-3 font-medium">
-                    Objekt
+                    {t.dashboard.property}
                   </th>
-                  <th className="px-5 py-3 text-right font-medium">Fällig bisher</th>
-                  <th className="px-5 py-3 text-right font-medium">Erhalten</th>
-                  <th className="px-5 py-3 text-right font-medium">Saldo</th>
-                  <th className="px-5 py-3 text-right font-medium">Restlaufzeit</th>
-                  <th className="px-5 py-3 font-medium">Vertragsende</th>
+                  <th className="px-5 py-3 text-right font-medium">{t.dashboard.dueSoFar}</th>
+                  <th className="px-5 py-3 text-right font-medium">{t.dashboard.received}</th>
+                  <th className="px-5 py-3 text-right font-medium">{t.dashboard.balance}</th>
+                  <th className="px-5 py-3 text-right font-medium">{t.dashboard.remaining}</th>
+                  <th className="px-5 py-3 font-medium">{t.dashboard.contractEnd}</th>
                   <th className="px-5 py-3 text-center font-medium">TA24</th>
                   {canEdit && <th className="px-5 py-3" />}
                 </tr>
@@ -135,7 +138,7 @@ export default async function DashboardPage({
                           {location}
                         </span>
                         <span className="ml-3 text-sm font-normal text-muted">
-                          {items.length} {items.length === 1 ? "Objekt" : "Objekte"}
+                          {t.dashboard.countProperties(items.length)}
                         </span>
                       </th>
                     </tr>
@@ -156,21 +159,21 @@ export default async function DashboardPage({
                             <span className="block text-xs text-muted">{p.tenant_name}</span>
                           )}
                           <div className="mt-0.5 flex flex-wrap gap-1.5">
-                            {p.archived && <Badge>Archiviert</Badge>}
-                            {!p.archived && p.summary.expired && <Badge>Abgelaufen</Badge>}
+                            {p.archived && <Badge>{t.dashboard.archived}</Badge>}
+                            {!p.archived && p.summary.expired && <Badge>{t.dashboard.expired}</Badge>}
                             {p.summary.hasMissingRates && (
-                              <Badge tone="negative">Miete fehlt</Badge>
+                              <Badge tone="negative">{t.dashboard.missingRate}</Badge>
                             )}
                           </div>
                         </td>
                         <td className="tabular px-5 py-3 text-right">
-                          {formatEuro(p.summary.totalDue)}
+                          {f.euro(p.summary.totalDue)}
                         </td>
                         <td className="tabular px-5 py-3 text-right">
-                          {formatEuro(p.summary.totalReceived)}
+                          {f.euro(p.summary.totalReceived)}
                           {p.summary.totalCredits > 0 && (
                             <span className="block text-xs text-muted">
-                              + {formatEuro(p.summary.totalCredits)} Gutschrift
+                              {t.dashboard.creditSuffix(f.euro(p.summary.totalCredits))}
                             </span>
                           )}
                         </td>
@@ -179,19 +182,19 @@ export default async function DashboardPage({
                             p.summary.balance < 0 ? "text-negative" : "text-positive"
                           }`}
                         >
-                          {formatEuro(p.summary.balance)}
+                          {f.euro(p.summary.balance)}
                         </td>
                         <td className="tabular px-5 py-3 text-right text-muted">
                           {p.summary.remainingMonths > 0
-                            ? `${p.summary.remainingMonths} Mon.`
-                            : "—"}
+                            ? t.dashboard.months(p.summary.remainingMonths)
+                            : t.common.none}
                         </td>
                         <td className="px-5 py-3 text-muted">
-                          {formatDate(p.summary.contractEnd)}
+                          {f.date(p.summary.contractEnd)}
                         </td>
                         <td className="px-5 py-3 text-center">
                           {p.ta24 ? (
-                            <Badge tone="accent">Ja</Badge>
+                            <Badge tone="accent">✓</Badge>
                           ) : (
                             <span className="text-muted">—</span>
                           )}
@@ -202,7 +205,7 @@ export default async function DashboardPage({
                               href={`/objekte/${p.id}?tab=zahlungen`}
                               className="whitespace-nowrap text-sm text-accent hover:underline"
                             >
-                              + Zahlung
+                              {t.dashboard.addPayment}
                             </Link>
                           </td>
                         )}
@@ -212,13 +215,13 @@ export default async function DashboardPage({
                     {orderedGroups.length > 1 && (
                       <tr className="border-b border-border text-muted">
                         <td className="px-5 py-2 text-right text-xs uppercase tracking-wide">
-                          Summe {location}
+                          {t.dashboard.sumOf(location)}
                         </td>
                         <td className="tabular px-5 py-2 text-right">
-                          {formatEuro(groupTotals.due)}
+                          {f.euro(groupTotals.due)}
                         </td>
                         <td className="tabular px-5 py-2 text-right">
-                          {formatEuro(groupTotals.received)}
+                          {f.euro(groupTotals.received)}
                         </td>
                         <td colSpan={canEdit ? 5 : 4} />
                       </tr>
@@ -229,17 +232,17 @@ export default async function DashboardPage({
 
               <tfoot>
                 <tr className="border-t-2 border-border bg-surface-muted/50 font-medium">
-                  <td className="px-5 py-3">Gesamt</td>
-                  <td className="tabular px-5 py-3 text-right">{formatEuro(totals.due)}</td>
+                  <td className="px-5 py-3">{t.dashboard.total}</td>
+                  <td className="tabular px-5 py-3 text-right">{f.euro(totals.due)}</td>
                   <td className="tabular px-5 py-3 text-right">
-                    {formatEuro(totals.received)}
+                    {f.euro(totals.received)}
                   </td>
                   <td
                     className={`tabular px-5 py-3 text-right ${
                       totals.balance < 0 ? "text-negative" : "text-positive"
                     }`}
                   >
-                    {formatEuro(totals.balance)}
+                    {f.euro(totals.balance)}
                   </td>
                   <td colSpan={canEdit ? 4 : 3} />
                 </tr>
@@ -248,27 +251,26 @@ export default async function DashboardPage({
                   <>
                     <tr className="text-muted">
                       <td className="px-5 py-2">
-                        zzgl. {hidden.length} ausgeblendete
-                        {hidden.length === 1 ? "s Objekt" : " Objekte"}
+                        {t.dashboard.plusHidden(hidden.length)}
                       </td>
                       <td className="tabular px-5 py-2 text-right">
-                        {formatEuro(hiddenTotals.due)}
+                        {f.euro(hiddenTotals.due)}
                       </td>
                       <td className="tabular px-5 py-2 text-right">
-                        {formatEuro(hiddenTotals.received)}
+                        {f.euro(hiddenTotals.received)}
                       </td>
                       <td className="tabular px-5 py-2 text-right">
-                        {formatEuro(hiddenTotals.balance)}
+                        {f.euro(hiddenTotals.balance)}
                       </td>
                       <td colSpan={canEdit ? 4 : 3} />
                     </tr>
                     <tr className="border-t border-border font-medium">
-                      <td className="px-5 py-2">Alle Objekte</td>
+                      <td className="px-5 py-2">{t.dashboard.allProperties}</td>
                       <td className="tabular px-5 py-2 text-right">
-                        {formatEuro(totals.due + hiddenTotals.due)}
+                        {f.euro(totals.due + hiddenTotals.due)}
                       </td>
                       <td className="tabular px-5 py-2 text-right">
-                        {formatEuro(totals.received + hiddenTotals.received)}
+                        {f.euro(totals.received + hiddenTotals.received)}
                       </td>
                       <td
                         className={`tabular px-5 py-2 text-right ${
@@ -277,7 +279,7 @@ export default async function DashboardPage({
                             : "text-positive"
                         }`}
                       >
-                        {formatEuro(totals.balance + hiddenTotals.balance)}
+                        {f.euro(totals.balance + hiddenTotals.balance)}
                       </td>
                       <td colSpan={canEdit ? 4 : 3} />
                     </tr>

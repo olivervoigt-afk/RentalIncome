@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useDict } from "@/components/dict-provider";
 
 /** Blendet archivierte und abgelaufene Objekte ein bzw. aus. */
 export default function ArchiveToggle({
@@ -11,6 +12,7 @@ export default function ArchiveToggle({
   active: boolean;
   count: number;
 }) {
+  const { t } = useDict();
   const pathname = usePathname();
   const params = new URLSearchParams(useSearchParams());
 
@@ -33,13 +35,11 @@ export default function ArchiveToggle({
       }`}
     >
       {active ? (
-        "Archiv ausblenden"
+        t.dashboard.hideArchive
       ) : count > 0 ? (
-        <>
-          {count} {count === 1 ? "Objekt" : "Objekte"} ausgeblendet — einblenden
-        </>
+        t.dashboard.hiddenToggle(count)
       ) : (
-        "Archiv einblenden"
+        t.dashboard.showArchive
       )}
     </Link>
   );

@@ -1,8 +1,9 @@
 import Link from "next/link";
+import type { Dict } from "@/lib/i18n/dictionaries";
 import { Badge, ButtonLink, Card, CardHeader, EmptyState } from "@/components/ui";
-import { requireProfile } from "@/lib/auth";
+import { formatters } from "@/lib/format";
+import { getDict } from "@/lib/i18n";
 import { getTa24Report } from "@/lib/queries";
-import { formatEuro } from "@/lib/rent";
 
 export const metadata = { title: "TA24" };
 
@@ -11,19 +12,18 @@ export default async function Ta24Page({
 }: {
   searchParams: Promise<{ jahr?: string }>;
 }) {
-  await requireProfile();
-
   const { jahr } = await searchParams;
-  const report = await getTa24Report();
+  const [report, { t, locale }] = await Promise.all([getTa24Report(), getDict()]);
+  const f = formatters(locale);
 
   if (report.years.length === 0) {
     return (
       <div className="space-y-6">
-        <Header />
+        <Header t={t} />
         <Card>
           <EmptyState
-            title="Keine Zahlungen auf TA24-Objekten"
-            description="Sobald für ein Objekt mit TA24-Kennzeichen Zahlungen erfasst sind, erscheinen sie hier."
+            title={t.ta24.emptyTitle}
+            description={t.ta24.emptyHint}
           />
         </Card>
       </div>
@@ -43,16 +43,16 @@ export default async function Ta24Page({
 
   return (
     <div className="space-y-6">
-      <Header />
+      <Header t={t} />
 
       {/* Überblick über alle Jahre */}
       <Card>
         <CardHeader
-          title="Alle Jahre"
-          description="Tatsächlich eingegangene Mieten auf Objekten mit TA24-Kennzeichen."
+          title={t.ta24.allYears}
+          description={t.ta24.allYearsHint}
           action={
             <ButtonLink href="/ta24/export" variant="secondary" prefetch={false}>
-              Alle Jahre als CSV
+              {t.ta24.exportAll}
             </ButtonLink>
           }
         />
@@ -60,9 +60,9 @@ export default async function Ta24Page({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                <th className="px-5 py-3 font-medium">Jahr</th>
-                <th className="px-5 py-3 text-right font-medium">Zahlungen</th>
-                <th className="px-5 py-3 text-right font-medium">Erhalten</th>
+                <th className="px-5 py-3 font-medium">{t.ta24.year}</th>
+                <th className="px-5 py-3 text-right font-medium">{t.ta24.payments}</th>
+                <th className="px-5 py-3 text-right font-medium">{t.ta24.received}</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -83,17 +83,17 @@ export default async function Ta24Page({
                       {cell.count}
                     </td>
                     <td className="tabular px-5 py-3 text-right font-medium">
-                      {formatEuro(cell.sum)}
+                      {f.euro(cell.sum)}
                     </td>
                     <td className="px-5 py-3 text-right">
                       {active ? (
-                        <span className="text-xs text-muted">wird unten gezeigt</span>
+                        <span className="text-xs text-muted">{t.ta24.shownBelow}</span>
                       ) : (
                         <Link
                           href={`/ta24?jahr=${year}`}
                           className="text-sm text-accent hover:underline"
                         >
-                          Aufschlüsseln
+                          {t.ta24.breakDown}
                         </Link>
                       )}
                     </td>
@@ -103,12 +103,12 @@ export default async function Ta24Page({
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border bg-surface-muted/50 font-medium">
-                <td className="px-5 py-3">Gesamt</td>
+                <td className="px-5 py-3">{t.ta24.total}</td>
                 <td className="tabular px-5 py-3 text-right text-muted">
                   {[...report.totalsByYear.values()].reduce((a, c) => a + c.count, 0)}
                 </td>
                 <td className="tabular px-5 py-3 text-right">
-                  {formatEuro(report.grandTotal)}
+                  {f.euro(report.grandTotal)}
                 </td>
                 <td />
               </tr>
@@ -121,10 +121,9 @@ export default async function Ta24Page({
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <h2 className="text-base font-semibold">
-            Aufschlüsselung {selected}
+            {t.ta24.breakdown(selected)}
             <span className="ml-2 text-sm font-normal text-muted">
-              {rows.length} {rows.length === 1 ? "Objekt" : "Objekte"} · {yearTotal.count}{" "}
-              {yearTotal.count === 1 ? "Zahlung" : "Zahlungen"}
+              {t.ta24.countProperties(rows.length)} · {t.ta24.countPayments(yearTotal.count)}
             </span>
           </h2>
           <div className="flex flex-wrap items-center gap-1">
@@ -147,7 +146,7 @@ export default async function Ta24Page({
               prefetch={false}
               className="ml-2"
             >
-              {selected} als CSV
+              {t.ta24.exportYear(selected)}
             </ButtonLink>
           </div>
         </div>
@@ -156,10 +155,10 @@ export default async function Ta24Page({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                <th className="w-[40%] min-w-[240px] px-5 py-3 font-medium">Objekt</th>
-                <th className="px-5 py-3 font-medium">Standort</th>
-                <th className="px-5 py-3 text-right font-medium">Zahlungen</th>
-                <th className="px-5 py-3 text-right font-medium">Erhalten {selected}</th>
+                <th className="w-[40%] min-w-[240px] px-5 py-3 font-medium">{t.ta24.property}</th>
+                <th className="px-5 py-3 font-medium">{t.ta24.location}</th>
+                <th className="px-5 py-3 text-right font-medium">{t.ta24.payments}</th>
+                <th className="px-5 py-3 text-right font-medium">{t.ta24.receivedIn(selected)}</th>
               </tr>
             </thead>
             <tbody>
@@ -177,14 +176,14 @@ export default async function Ta24Page({
                       </Link>
                       {row.archived && (
                         <span className="ml-2">
-                          <Badge>Archiviert</Badge>
+                          <Badge>{t.ta24.archived}</Badge>
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-muted">{row.location ?? "—"}</td>
+                    <td className="px-5 py-3 text-muted">{row.location ?? t.common.none}</td>
                     <td className="tabular px-5 py-3 text-right text-muted">{cell.count}</td>
                     <td className="tabular px-5 py-3 text-right font-medium">
-                      {formatEuro(cell.sum)}
+                      {f.euro(cell.sum)}
                     </td>
                   </tr>
                 );
@@ -193,13 +192,13 @@ export default async function Ta24Page({
             <tfoot>
               <tr className="border-t-2 border-border bg-surface-muted/50 font-medium">
                 <td className="px-5 py-3" colSpan={2}>
-                  Summe {selected}
+                  {t.ta24.sumOf(selected)}
                 </td>
                 <td className="tabular px-5 py-3 text-right text-muted">
                   {yearTotal.count}
                 </td>
                 <td className="tabular px-5 py-3 text-right text-lg">
-                  {formatEuro(yearTotal.sum)}
+                  {f.euro(yearTotal.sum)}
                 </td>
               </tr>
             </tfoot>
@@ -210,17 +209,11 @@ export default async function Ta24Page({
   );
 }
 
-function Header() {
+function Header({ t }: { t: Dict }) {
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight">TA24-Auswertung</h1>
-      <p className="mt-1 max-w-3xl text-sm text-muted">
-        Grundlage sind die <strong>tatsächlich eingegangenen Zahlungen</strong> nach
-        ihrem Zahlungsdatum, nicht die Fälligkeit. Eine Dezembermiete, die im Januar
-        eingeht, zählt daher zum Januar-Jahr. Berücksichtigt sind alle Objekte mit
-        TA24-Kennzeichen, auch archivierte. Gutschriften bleiben aussen vor, da ihnen
-        kein Geldeingang gegenübersteht.
-      </p>
+      <h1 className="text-2xl font-semibold tracking-tight">{t.ta24.title}</h1>
+      <p className="mt-1 max-w-3xl text-sm text-muted">{t.ta24.intro}</p>
     </div>
   );
 }
