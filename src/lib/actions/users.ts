@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireEditor } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/lib/types";
@@ -117,7 +117,7 @@ export async function addPaymentSource(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  await requireEditor();
 
   const name = text(formData, "name");
   if (!name) return { error: "Bitte eine Bezeichnung angeben." };
@@ -138,7 +138,7 @@ export async function addPaymentSource(
 }
 
 export async function deletePaymentSource(formData: FormData) {
-  await requireAdmin();
+  await requireEditor();
 
   const id = text(formData, "id");
   const supabase = await createClient();
@@ -153,7 +153,7 @@ export async function addLocation(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  await requireEditor();
 
   const name = text(formData, "name");
   if (!name) return { error: "Bitte eine Bezeichnung angeben." };
@@ -176,7 +176,7 @@ export async function addLocation(
 }
 
 export async function deleteLocation(formData: FormData) {
-  await requireAdmin();
+  await requireEditor();
 
   const id = text(formData, "id");
   const supabase = await createClient();

@@ -16,9 +16,9 @@ export const metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const profile = await requireProfile();
-  const isAdmin = profile.role === "admin";
+  const canEdit = profile.role !== "viewer";
 
-  const [sources, locations] = isAdmin
+  const [sources, locations] = canEdit
     ? await Promise.all([getPaymentSources(), getLocations()])
     : [[], []];
 
@@ -56,7 +56,7 @@ export default async function SettingsPage() {
         </div>
       </Card>
 
-      {isAdmin && (
+      {canEdit && (
         <Card>
           <CardHeader
             title="Standorte"
@@ -91,7 +91,7 @@ export default async function SettingsPage() {
         </Card>
       )}
 
-      {isAdmin && (
+      {canEdit && (
         <Card>
           <CardHeader
             title="Zahlungsquellen"

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, Card, CardHeader, EmptyState } from "@/components/ui";
+import { Badge, ButtonLink, Card, CardHeader, EmptyState } from "@/components/ui";
 import { requireProfile } from "@/lib/auth";
 import { getTa24Report } from "@/lib/queries";
 import { formatEuro } from "@/lib/rent";
@@ -50,6 +50,11 @@ export default async function Ta24Page({
         <CardHeader
           title="Alle Jahre"
           description="Tatsächlich eingegangene Mieten auf Objekten mit TA24-Kennzeichen."
+          action={
+            <ButtonLink href="/ta24/export" variant="secondary" prefetch={false}>
+              Alle Jahre als CSV
+            </ButtonLink>
+          }
         />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -122,7 +127,7 @@ export default async function Ta24Page({
               {yearTotal.count === 1 ? "Zahlung" : "Zahlungen"}
             </span>
           </h2>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             {report.years.map((year) => (
               <Link
                 key={year}
@@ -136,6 +141,14 @@ export default async function Ta24Page({
                 {year}
               </Link>
             ))}
+            <ButtonLink
+              href={`/ta24/export?jahr=${selected}`}
+              variant="secondary"
+              prefetch={false}
+              className="ml-2"
+            >
+              {selected} als CSV
+            </ButtonLink>
           </div>
         </div>
 
