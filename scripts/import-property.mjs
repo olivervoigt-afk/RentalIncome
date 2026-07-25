@@ -99,32 +99,29 @@ if (periodError) {
   process.exit(1);
 }
 
-// --- Zahlungsquellen: bestehende wiederverwenden, fehlende anlegen ---
+/* --- Zahlungen ---
+ * Die Referenzspalte der alten Tabelle ist uneinheitlich: mal steht dort eine
+ * Zahlungsquelle ("Sparkasse"), mal nur der abgedeckte Zeitraum ("March").
+ * Deshalb wird nur dann eine Quelle gesetzt, wenn die Referenz exakt einer
+ * bereits angelegten Quelle entspricht. Alles andere landet in der Notiz.
+ * Neue Quellen legt das Skript bewusst nicht selbst an.
+ */
 const { data: sources } = await supabase.from("payment_sources").select("id, name");
 const byName = new Map(sources.map((s) => [s.name.toLowerCase(), s.id]));
 
-const neededNames = [...new Set(data.payments.map((p) => p.reference).filter(Boolean))];
-for (const n of neededNames) {
-  if (byName.has(n.toLowerCase())) continue;
-  const { data: created } = await supabase
-    .from("payment_sources")
-    .insert({ name: n, sort_order: 10 })
-    .select("id")
-    .single();
-  if (created) {
-    byName.set(n.toLowerCase(), created.id);
-    console.log(`Zahlungsquelle „${n}" angelegt.`);
-  }
-}
+const rows = data.payments.map((p) => {
+  const matched = p.reference ? byName.get(p.reference.toLowerCase()) : null;
+  return {
+    property_id: property.id,
+    paid_on: p.date,
+    amount: p.amount,
+    source_id: matched ?? null,
+    note: matched ? "" : (p.reference ?? ""),
+  };
+});
 
-// --- Zahlungen in Blöcken ---
-const rows = data.payments.map((p) => ({
-  property_id: property.id,
-  paid_on: p.date,
-  amount: p.amount,
-  source_id: p.reference ? (byName.get(p.reference.toLowerCase()) ?? null) : null,
-  note: "",
-}));
+const asSource = rows.filter((r) => r.source_id).length;
+const asNote = rows.filter((r) => r.note).length;
 
 for (let i = 0; i < rows.length; i += 200) {
   const { error: payError } = await supabase.from("payments").insert(rows.slice(i, i + 200));
@@ -141,7 +138,7 @@ Objekt:        ${name}
 Mietbeginn:    ${data.start_date}
 Laufzeit:      ${data.term_months} Monate (${frequency})
 Mietstaffel:   ${periods.length} Stufen
-Zahlungen:     ${rows.length}
+Zahlungen:     ${rows.length} (${asSource} mit Quelle, ${asNote} mit Notiz)
 Summe:         ${sum.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR
 Kontrollwert:  ${(data.stated_payment_sum ?? 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR
 Abweichung:    ${(sum - (data.stated_payment_sum ?? 0)).toFixed(2)} EUR

@@ -1,0 +1,241 @@
+"""Liest ein Objektblatt der Google-Tabelle aus und prueft es gegen die
+Kontrollsummen, die im Blatt selbst stehen.
+
+    python3 extract.py "Zorneding"
+"""
+import json
+import sys
+from xlsx import Workbook, serial_to_date
+
+FILLER_YEAR = 2090  # Leere Staffelzeilen tragen Platzhalterdaten weit in der Zukunft.
+
+
+def num(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def find_label(grid, text, max_col=3):
+    """Zeile und Spalte der ersten Zelle, die mit text beginnt."""
+    needle = text.lower()
+    for r, row in enumerate(grid):
+        for c, v in enumerate(row[:max_col]):
+            if isinstance(v, str) and v.strip().lower().startswith(needle):
+                return r, c
+    return None, None
+
+
+def value_right(grid, row, col):
+    """Erster nicht leerer Wert rechts der Beschriftung."""
+    if row is None:
+        return None
+    for c in range(col + 1, min(col + 4, len(grid[row]))):
+        if grid[row][c] != "":
+            return grid[row][c]
+    return None
+
+
+def summary_row(wb, sheet_name):
+    """Zeile des Objekts im Uebersichtsblatt: TA24, Soll, Ist, Saldo."""
+    grid = wb.grid(next(p for n, p in wb.sheets if n == "Summary"))
+    wanted = sheet_name.strip().lower()
+
+    for row in grid:
+        label = row[1] if len(row) > 1 else ""
+        if isinstance(label, str) and label.strip().lower() == wanted:
+            def cell(i):
+                return num(row[i]) if len(row) > i else None
+
+            raw_ta24 = row[11] if len(row) > 11 else ""
+            return {
+                "ta24": str(raw_ta24).strip().upper() in ("TRUE", "1", "JA", "WAHR"),
+                "balance": cell(2),
+                "due": cell(4),
+                "received": cell(5),
+                "contract_end": serial_to_date(row[7] if len(row) > 7 else ""),
+            }
+    return None
+
+
+def read_plan(grid):
+    """Der im Blatt gepflegte Zahlungsplan: Spalten F/G/H = Nr, Faelligkeit, Betrag."""
+    r_head, _ = find_label(grid, "Which payments are due", max_col=12)
+    start = r_head + 1 if r_head is not None else 13
+
+    plan = []
+    for r in range(start, len(grid)):
+        row = grid[r]
+        d = serial_to_date(row[6] if len(row) > 6 else "")
+        a = num(row[7] if len(row) > 7 else "")
+        if d is None or a is None or d.year >= FILLER_YEAR:
+            continue
+        plan.append({"due": d, "amount": round(a, 2)})
+
+    plan.sort(key=lambda p: p["due"])
+    return plan
+
+
+def periods_from_plan(plan):
+    """Fasst aufeinanderfolgende Raten gleicher Hoehe zu Staffelstufen zusammen.
+
+    Dadurch werden auch einmalig abweichende Raten korrekt abgebildet, die
+    sich aus der reinen Staffel-Eingabe nicht ableiten lassen.
+    """
+    steps = []
+    for entry in plan:
+        if steps and abs(steps[-1]["amount"] - entry["amount"]) < 0.005:
+            continue
+        steps.append({"from": entry["due"].isoformat(), "amount": entry["amount"]})
+    return steps
+
+
+def extract(wb, sheet_name):
+    path = next(p for n, p in wb.sheets if n == sheet_name)
+    grid = wb.grid(path)
+    warnings = []
+
+    def labelled(text):
+        r, c = find_label(grid, text)
+        if r is None:
+            warnings.append(f'Beschriftung "{text}" nicht gefunden')
+            return None
+        return value_right(grid, r, c)
+
+    rent = num(labelled("Rent per period"))
+    months = num(labelled("payable after x months"))
+    periods = num(labelled("for how many periods"))
+    start = serial_to_date(labelled("first payment due"))
+
+    # Titelzeile: A="Summary", B=<Bezeichnung>
+    r_sum, c_sum = find_label(grid, "Summary")
+    title = value_right(grid, r_sum, c_sum) if r_sum is not None else None
+
+    # Mieter steht bei "contract terms" daneben, sofern es keine Vorlage ist.
+    tenant = labelled("contract terms")
+    if isinstance(tenant, str) and tenant.strip().lower() in ("vorlage", "template"):
+        tenant = ""
+
+    # --- Mietstaffel: Spalten A/B unterhalb von "Rent adjustments" ---
+    r_adj, _ = find_label(grid, "Rent adjustment")
+    if r_adj is None:
+        r_adj, _ = find_label(grid, "Rent escalation")
+    r_stop, _ = find_label(grid, "Payment Sum")
+
+    escalations = []
+    if r_adj is not None:
+        end = r_stop if r_stop is not None else len(grid)
+        for r in range(r_adj + 1, end):
+            d = serial_to_date(grid[r][0] if len(grid[r]) > 0 else "")
+            a = num(grid[r][1] if len(grid[r]) > 1 else "")
+            if d is None or a is None:
+                continue
+            if d.year >= FILLER_YEAR or a <= 0:
+                continue  # ungenutzte Platzhalterzeile
+            escalations.append({"from": d.isoformat(), "amount": round(a, 2)})
+
+    escalations.sort(key=lambda e: e["from"])
+
+    # --- Zahlungen: unterhalb der Kopfzeile "Payment Date" ---
+    r_pay, c_pay = find_label(grid, "Payment Date")
+    payments = []
+    if r_pay is None:
+        warnings.append("Zahlungsliste nicht gefunden")
+    else:
+        for r in range(r_pay + 1, len(grid)):
+            row = grid[r]
+            d = serial_to_date(row[c_pay] if len(row) > c_pay else "")
+            a = num(row[c_pay + 1] if len(row) > c_pay + 1 else "")
+            if d is None or a is None or a == 0:
+                continue
+            if d.year >= FILLER_YEAR:
+                continue
+            ref = row[c_pay + 2] if len(row) > c_pay + 2 else ""
+            payments.append(
+                {
+                    "date": d.isoformat(),
+                    "amount": round(a, 2),
+                    "reference": str(ref).strip(),
+                }
+            )
+
+    # --- Kontrollsummen aus dem Blatt ---
+    r_ps, c_ps = find_label(grid, "Payment Sum")
+    stated_sum = num(value_right(grid, r_ps, c_ps)) if r_ps is not None else None
+    if stated_sum is None and r_ps is not None and r_ps + 1 < len(grid):
+        # Der Wert steht bei manchen Blaettern eine Zeile tiefer.
+        stated_sum = num(grid[r_ps + 1][c_ps + 1] if len(grid[r_ps + 1]) > c_ps + 1 else "")
+
+    r_due, c_due = find_label(grid, "total rent due", max_col=12)
+    stated_due = num(value_right(grid, r_due, c_due)) if r_due is not None else None
+
+    paid = round(sum(p["amount"] for p in payments), 2)
+
+    if rent is None or start is None or periods is None:
+        warnings.append("Vertragsdaten unvollständig")
+    if months not in (1, 3, 6, 12):
+        warnings.append(f"Ungewöhnlicher Rhythmus: {months} Monate")
+    if stated_sum is not None and abs(paid - stated_sum) > 1:
+        warnings.append(
+            f"Zahlungssumme weicht ab: berechnet {paid:,.2f} vs. Blatt {stated_sum:,.2f}"
+        )
+    if not escalations and rent:
+        escalations.append({"from": start.isoformat(), "amount": round(rent, 2)})
+        warnings.append("Keine Staffel gefunden — Grundmiete ab Vertragsbeginn angesetzt")
+
+    # Der gepflegte Zahlungsplan ist massgeblich: er enthaelt auch einmalige
+    # Abweichungen. Die Staffel-Eingabe dient nur als Rueckfallebene.
+    plan = read_plan(grid)
+    plan_steps = periods_from_plan(plan)
+    plan_total = round(sum(p["amount"] for p in plan), 2)
+
+    if plan_steps:
+        if len(plan_steps) > len(escalations):
+            warnings.append(
+                f"{len(plan_steps) - len(escalations)} Sonderrate(n) im Zahlungsplan "
+                "gefunden und als eigene Staffelstufe übernommen"
+            )
+        escalations = plan_steps
+
+    overview = summary_row(wb, sheet_name)
+    if overview is None:
+        warnings.append("Objekt steht nicht im Übersichtsblatt — TA24 unbekannt")
+    elif overview["received"] is not None and abs(paid - overview["received"]) > 1:
+        warnings.append(
+            f"Weicht von der Übersicht ab: dort {overview['received']:,.2f} erhalten"
+        )
+
+    return {
+        "sheet": sheet_name,
+        "title": title,
+        "ta24": overview["ta24"] if overview else False,
+        "overview": {
+            "balance": overview["balance"] if overview else None,
+            "due": overview["due"] if overview else None,
+            "received": overview["received"] if overview else None,
+            "contract_end": overview["contract_end"].isoformat()
+            if overview and overview["contract_end"]
+            else None,
+        },
+        "tenant": tenant or "",
+        "rent_per_period": rent,
+        "months_per_period": months,
+        "periods": periods,
+        "term_months": int(periods * months) if periods and months else None,
+        "start_date": start.isoformat() if start else None,
+        "escalations": escalations,
+        "plan_count": len(plan),
+        "plan_total": plan_total,
+        "payments": payments,
+        "paid_total": paid,
+        "stated_payment_sum": stated_sum,
+        "stated_total_due": stated_due,
+        "warnings": warnings,
+    }
+
+
+if __name__ == "__main__":
+    wb = Workbook("sheet.xlsx")
+    result = extract(wb, sys.argv[1])
+    print(json.dumps(result, indent=2, ensure_ascii=False))
