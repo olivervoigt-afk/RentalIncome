@@ -2,16 +2,25 @@ import ChangePasswordForm from "@/components/change-password-form";
 import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
 import { Badge, Card, CardHeader, Field, Input } from "@/components/ui";
-import { addPaymentSource, deletePaymentSource } from "@/lib/actions/users";
+import {
+  addLocation,
+  addPaymentSource,
+  deleteLocation,
+  deletePaymentSource,
+} from "@/lib/actions/users";
 import { requireProfile } from "@/lib/auth";
-import { getPaymentSources } from "@/lib/queries";
+import { getLocations, getPaymentSources } from "@/lib/queries";
 import { ROLE_LABELS } from "@/lib/types";
 
 export const metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const profile = await requireProfile();
-  const sources = profile.role === "admin" ? await getPaymentSources() : [];
+  const isAdmin = profile.role === "admin";
+
+  const [sources, locations] = isAdmin
+    ? await Promise.all([getPaymentSources(), getLocations()])
+    : [[], []];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -47,7 +56,42 @@ export default async function SettingsPage() {
         </div>
       </Card>
 
-      {profile.role === "admin" && (
+      {isAdmin && (
+        <Card>
+          <CardHeader
+            title="Standorte"
+            description="Auswahlmöglichkeiten im Objektformular. Das Dashboard gruppiert danach."
+          />
+
+          <ul className="divide-y divide-border">
+            {locations.map((location) => (
+              <li
+                key={location.id}
+                className="flex items-center justify-between gap-4 px-5 py-3 text-sm"
+              >
+                <span className="font-medium">{location.name}</span>
+                <DangerAction
+                  action={deleteLocation}
+                  fields={{ id: location.id }}
+                  trigger="Löschen"
+                  title="Standort löschen?"
+                  description={`„${location.name}" steht künftig nicht mehr zur Auswahl. Objekte mit diesem Standort behalten alle Daten und erscheinen dann unter „Ohne Standort".`}
+                />
+              </li>
+            ))}
+          </ul>
+
+          <div className="border-t border-border bg-surface-muted/40 p-5">
+            <InlineForm action={addLocation} submitLabel="Hinzufügen">
+              <Field label="Neuer Standort">
+                <Input name="name" required placeholder="z. B. Österreich" />
+              </Field>
+            </InlineForm>
+          </div>
+        </Card>
+      )}
+
+      {isAdmin && (
         <Card>
           <CardHeader
             title="Zahlungsquellen"

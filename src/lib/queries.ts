@@ -3,6 +3,7 @@ import { summarize, type PropertySummary } from "./rent";
 import type {
   ContractHistoryEntry,
   Credit,
+  Location,
   Payment,
   PaymentSource,
   Profile,
@@ -11,7 +12,34 @@ import type {
   RentPeriod,
 } from "./types";
 
-export type PropertyWithSummary = Property & { summary: PropertySummary };
+export type PropertyWithSummary = Property & {
+  summary: PropertySummary;
+  /** Aufgelöster Standortname, null wenn keiner hinterlegt ist. */
+  location: string | null;
+};
+
+type Client = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Holt eine Tabelle vollständig. Die Schnittstelle liefert je Anfrage
+ * höchstens 1000 Zeilen — ohne Blättern fehlten bei mehreren tausend
+ * Zahlungen stillschweigend Beträge in den Summen.
+ */
+async function fetchAll<T>(supabase: Client, table: string): Promise<T[]> {
+  const size = 1000;
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += size) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .range(from, from + size - 1);
+
+    if (error) throw error;
+    rows.push(...((data ?? []) as T[]));
+    if (!data || data.length < size) return rows;
+  }
+}
 
 function groupBy<T extends { property_id: string }>(rows: T[]) {
   const map = new Map<string, T[]>();
@@ -31,22 +59,29 @@ function groupBy<T extends { property_id: string }>(rows: T[]) {
 export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]> {
   const supabase = await createClient();
 
-  const [properties, periods, payments, credits] = await Promise.all([
+  const [properties, periods, payments, credits, locations] = await Promise.all([
     supabase.from("properties").select("*").order("name"),
-    supabase.from("rent_periods").select("*"),
-    supabase.from("payments").select("*"),
-    supabase.from("credits").select("*"),
+    fetchAll<RentPeriod>(supabase, "rent_periods"),
+    fetchAll<Payment>(supabase, "payments"),
+    fetchAll<Credit>(supabase, "credits"),
+    supabase.from("locations").select("*"),
   ]);
 
   if (properties.error) throw properties.error;
 
-  const byPeriod = groupBy((periods.data ?? []) as RentPeriod[]);
-  const byPayment = groupBy((payments.data ?? []) as Payment[]);
-  const byCredit = groupBy((credits.data ?? []) as Credit[]);
+  const byPeriod = groupBy(periods);
+  const byPayment = groupBy(payments);
+  const byCredit = groupBy(credits);
+  const locationName = new Map(
+    ((locations.data ?? []) as Location[]).map((l) => [l.id, l.name]),
+  );
   const now = new Date();
 
   return (properties.data as Property[]).map((property) => ({
     ...property,
+    location: property.location_id
+      ? (locationName.get(property.location_id) ?? null)
+      : null,
     summary: summarize(
       property,
       byPeriod.get(property.id) ?? [],
@@ -59,6 +94,8 @@ export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]>
 
 export type PropertyDetail = {
   property: Property;
+  /** Aufgelöster Standortname, null wenn keiner hinterlegt ist. */
+  location: string | null;
   periods: RentPeriod[];
   payments: Payment[];
   credits: Credit[];
@@ -80,6 +117,16 @@ export async function getPropertyDetail(
 
   if (!property) return null;
 
+  const typedProperty = property as Property;
+
+  const locationRow = typedProperty.location_id
+    ? await supabase
+        .from("locations")
+        .select("name")
+        .eq("id", typedProperty.location_id)
+        .maybeSingle()
+    : null;
+
   const [periods, payments, credits, documents, history] = await Promise.all([
     supabase.from("rent_periods").select("*").eq("property_id", id).order("valid_from"),
     supabase.from("payments").select("*").eq("property_id", id).order("paid_on", { ascending: false }),
@@ -88,13 +135,14 @@ export async function getPropertyDetail(
     supabase.from("contract_history").select("*").eq("property_id", id).order("changed_at", { ascending: false }),
   ]);
 
-  const typed = property as Property;
+  const typed = typedProperty;
   const periodRows = (periods.data ?? []) as RentPeriod[];
   const paymentRows = (payments.data ?? []) as Payment[];
   const creditRows = (credits.data ?? []) as Credit[];
 
   return {
     property: typed,
+    location: (locationRow?.data as { name: string } | null)?.name ?? null,
     periods: periodRows,
     payments: paymentRows,
     credits: creditRows,
@@ -102,6 +150,16 @@ export async function getPropertyDetail(
     history: (history.data ?? []) as ContractHistoryEntry[],
     summary: summarize(typed, periodRows, paymentRows, creditRows),
   };
+}
+
+export async function getLocations(): Promise<Location[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("locations")
+    .select("*")
+    .order("sort_order")
+    .order("name");
+  return (data ?? []) as Location[];
 }
 
 export async function getPaymentSources(): Promise<PaymentSource[]> {

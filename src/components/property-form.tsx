@@ -11,17 +11,19 @@ import {
   Textarea,
 } from "@/components/ui";
 import type { ActionState } from "@/lib/actions/auth";
-import { FREQUENCY_LABELS, type Property } from "@/lib/types";
+import { FREQUENCY_LABELS, type Location, type Property } from "@/lib/types";
 
 type Action = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
 export default function PropertyForm({
   action,
   property,
+  locations,
   showInitialRent = false,
 }: {
   action: Action;
   property?: Property;
+  locations: Location[];
   /** Beim Anlegen kann direkt die erste Miete miterfasst werden. */
   showInitialRent?: boolean;
 }) {
@@ -39,12 +41,20 @@ export default function PropertyForm({
           <Input name="name" required defaultValue={property?.name} autoFocus />
         </Field>
 
-        <Field label="Standort">
-          <Input
-            name="location"
-            defaultValue={property?.location}
-            placeholder="z. B. Sliema, Malta"
-          />
+        <Field
+          label="Standort"
+          hint="Weitere Standorte legt der Administrator in den Einstellungen an."
+        >
+          <Select name="location_id" defaultValue={property?.location_id ?? ""}>
+            <option value="">Ohne Standort</option>
+            {locations
+              .filter((l) => l.active || l.id === property?.location_id)
+              .map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+          </Select>
         </Field>
 
         <Field label="Mieter">

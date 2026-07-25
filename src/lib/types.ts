@@ -37,10 +37,19 @@ export type PaymentSource = {
   sort_order: number;
 };
 
+export type Location = {
+  id: string;
+  name: string;
+  active: boolean;
+  sort_order: number;
+};
+
+export const NO_LOCATION = "Ohne Standort";
+
 export type Property = {
   id: string;
   name: string;
-  location: string;
+  location_id: string | null;
   tenant_name: string;
   start_date: string;
   term_months: number;

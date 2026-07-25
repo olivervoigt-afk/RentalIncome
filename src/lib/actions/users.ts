@@ -146,3 +146,43 @@ export async function deletePaymentSource(formData: FormData) {
 
   revalidatePath("/einstellungen");
 }
+
+/* ---------------- Standorte ---------------- */
+
+export async function addLocation(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const name = text(formData, "name");
+  if (!name) return { error: "Bitte eine Bezeichnung angeben." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("locations").insert({ name, sort_order: 10 });
+
+  if (error) {
+    return {
+      error:
+        error.code === "23505"
+          ? "Diesen Standort gibt es bereits."
+          : error.message,
+    };
+  }
+
+  revalidatePath("/einstellungen");
+  revalidatePath("/");
+  return { success: `„${name}" wurde hinzugefügt.` };
+}
+
+export async function deleteLocation(formData: FormData) {
+  await requireAdmin();
+
+  const id = text(formData, "id");
+  const supabase = await createClient();
+  // Objekte behalten ihren Eintrag; die Zuordnung wird per ON DELETE SET NULL gelöst.
+  await supabase.from("locations").delete().eq("id", id);
+
+  revalidatePath("/einstellungen");
+  revalidatePath("/");
+}

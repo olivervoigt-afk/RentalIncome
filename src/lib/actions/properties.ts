@@ -29,7 +29,7 @@ function number(formData: FormData, key: string): number {
 
 type PropertyInput = {
   name: string;
-  location: string;
+  location_id: string | null;
   tenant_name: string;
   start_date: string;
   term_months: number;
@@ -53,7 +53,7 @@ function readProperty(formData: FormData): PropertyInput | string {
 
   return {
     name,
-    location: text(formData, "location"),
+    location_id: text(formData, "location_id") || null,
     tenant_name: text(formData, "tenant_name"),
     start_date,
     term_months,
@@ -93,7 +93,7 @@ export async function createProperty(
   }
 
   revalidatePath("/");
-  revalidatePath("/objekte");
+
   redirect(`/objekte/${data.id}`);
 }
 
@@ -127,7 +127,7 @@ export async function updateProperty(
   }
 
   revalidatePath("/");
-  revalidatePath("/objekte");
+
   revalidatePath(`/objekte/${id}`);
   revalidatePath(`/objekte/${id}/bearbeiten`);
   return { success: "Änderungen gespeichert." };
@@ -143,7 +143,7 @@ export async function setArchived(formData: FormData) {
   await supabase.from("properties").update({ archived }).eq("id", id);
 
   revalidatePath("/");
-  revalidatePath("/objekte");
+
   revalidatePath(`/objekte/${id}`);
 }
 
@@ -155,8 +155,8 @@ export async function deleteProperty(formData: FormData) {
   await supabase.from("properties").delete().eq("id", id);
 
   revalidatePath("/");
-  revalidatePath("/objekte");
-  redirect("/objekte");
+
+  redirect("/");
 }
 
 /* ---------------- Mietstaffel ---------------- */

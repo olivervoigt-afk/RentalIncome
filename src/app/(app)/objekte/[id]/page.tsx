@@ -38,7 +38,8 @@ export default async function PropertyDetailPage({
 
   if (!detail) notFound();
 
-  const { property, periods, payments, credits, documents, history, summary } = detail;
+  const { property, location, periods, payments, credits, documents, history, summary } =
+    detail;
   const canEdit = profile?.role !== "viewer";
 
   const tab: Tab = TABS.includes(query.tab as Tab) ? (query.tab as Tab) : "uebersicht";
@@ -51,12 +52,12 @@ export default async function PropertyDetailPage({
       {/* Kopfbereich — bleibt über allen Tabs gleich */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/objekte" className="text-sm text-muted hover:text-foreground">
-            ← Alle Objekte
+          <Link href="/" className="text-sm text-muted hover:text-foreground">
+            ← Zum Dashboard
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{property.name}</h1>
           <p className="mt-1 text-sm text-muted">
-            {property.location || "Kein Standort"}
+            {location ?? "Kein Standort"}
             {property.tenant_name && ` · Mieter: ${property.tenant_name}`}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">

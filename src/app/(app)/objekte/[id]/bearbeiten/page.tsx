@@ -4,7 +4,7 @@ import PropertyForm from "@/components/property-form";
 import { Card, CardHeader } from "@/components/ui";
 import { updateProperty } from "@/lib/actions/properties";
 import { requireProfile } from "@/lib/auth";
-import { getPropertyDetail } from "@/lib/queries";
+import { getLocations, getPropertyDetail } from "@/lib/queries";
 
 export default async function EditPropertyPage({
   params,
@@ -15,7 +15,10 @@ export default async function EditPropertyPage({
   const profile = await requireProfile();
   if (profile.role === "viewer") redirect(`/objekte/${id}`);
 
-  const detail = await getPropertyDetail(id);
+  const [detail, locations] = await Promise.all([
+    getPropertyDetail(id),
+    getLocations(),
+  ]);
   if (!detail) notFound();
 
   return (
@@ -35,7 +38,11 @@ export default async function EditPropertyPage({
           description="Änderungen an Mietbeginn oder Laufzeit werden in der Vertragshistorie festgehalten."
         />
         <div className="p-5">
-          <PropertyForm action={updateProperty} property={detail.property} />
+          <PropertyForm
+            action={updateProperty}
+            property={detail.property}
+            locations={locations}
+          />
         </div>
       </Card>
     </div>
