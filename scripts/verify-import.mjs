@@ -47,14 +47,32 @@ for (const file of readdirSync(dir)) {
   });
 }
 
-// --- Ist-Zustand aus der Datenbank ---
-const [{ data: properties }, { data: periods }, { data: payments }, { data: credits }] =
-  await Promise.all([
-    supabase.from("properties").select("*").order("name"),
-    supabase.from("rent_periods").select("*"),
-    supabase.from("payments").select("property_id, amount"),
-    supabase.from("credits").select("property_id, amount"),
-  ]);
+/**
+ * Holt eine Tabelle vollständig. Ohne Blättern liefert die Schnittstelle
+ * höchstens 1000 Zeilen — bei mehreren tausend Zahlungen führte das zu
+ * scheinbar fehlenden Beträgen.
+ */
+async function fetchAll(table, columns) {
+  const size = 1000;
+  const rows = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .range(from, from + size - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < size) return rows;
+  }
+}
+
+const [properties, periods, payments, credits] = await Promise.all([
+  fetchAll("properties", "*"),
+  fetchAll("rent_periods", "*"),
+  fetchAll("payments", "property_id, amount"),
+  fetchAll("credits", "property_id, amount"),
+]);
+properties.sort((a, b) => a.name.localeCompare(b.name, "de"));
 
 const group = (rows) => {
   const map = new Map();

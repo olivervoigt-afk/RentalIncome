@@ -12,7 +12,8 @@ from xlsx import Workbook, serial_to_date
 FILLER_YEAR = 2090  # Leere Staffelzeilen tragen Platzhalterdaten weit in der Zukunft.
 
 
-TEXT_DATE = re.compile(r"^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})$")
+# Trennzeichen duerfen sich wiederholen: in der Quelle steht auch "01.10..2025".
+TEXT_DATE = re.compile(r"^(\d{1,2})[.\-/]+(\d{1,2})[.\-/]+(\d{2,4})$")
 
 
 DAYS_IN_MONTH = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
@@ -70,6 +71,20 @@ def find_label(grid, text, max_col=3):
     return None, None
 
 
+def find_exact(grid, text, max_col=3):
+    """Wie find_label, aber die Zelle muss genau dem Text entsprechen.
+
+    Noetig fuer kurze Beschriftungen der aelteren Blaetter ("Rent", "#"),
+    die sonst auch auf "Rent adjustments" passen wuerden.
+    """
+    needle = text.lower()
+    for r, row in enumerate(grid):
+        for c, v in enumerate(row[:max_col]):
+            if isinstance(v, str) and v.strip().lower() == needle:
+                return r, c
+    return None, None
+
+
 def value_right(grid, row, col):
     """Erster nicht leerer Wert rechts der Beschriftung."""
     if row is None:
@@ -91,41 +106,71 @@ def normalize(text):
 
 
 def summary_row(wb, sheet_name):
-    """Zeile des Objekts im Uebersichtsblatt: TA24, Soll, Ist, Saldo."""
+    """Zeile des Objekts im Uebersichtsblatt: TA24, Soll, Ist, Saldo.
+
+    Eine genaue Namensgleichheit hat Vorrang. Nur wenn es keine gibt, wird auf
+    den Praefix ausgewichen — Blattnamen sind im xlsx-Export auf 31 Zeichen
+    gekuerzt. Ohne diesen Vorrang bekaeme "Tigne Point Q1-37" die Werte von
+    "Tigne Point Q1-37 Eman".
+    """
     grid = wb.grid(next(p for n, p in wb.sheets if n == "Summary"))
     wanted = normalize(sheet_name)
 
+    exact, prefixed = [], []
     for row in grid:
         label = row[1] if len(row) > 1 else ""
         if not isinstance(label, str) or not label.strip():
             continue
         candidate = normalize(label)
-        # Der Blattname kann eine gekuerzte Fassung des Uebersichtsnamens sein.
-        if candidate == wanted or candidate.startswith(wanted):
-            def cell(i):
-                return num(row[i]) if len(row) > i else None
+        if candidate == wanted:
+            exact.append(row)
+        elif candidate.startswith(wanted):
+            prefixed.append((len(candidate), row))
 
-            raw_ta24 = row[11] if len(row) > 11 else ""
-            return {
-                "ta24": str(raw_ta24).strip().upper() in ("TRUE", "1", "JA", "WAHR"),
-                "balance": cell(2),
-                "due": cell(4),
-                "received": cell(5),
-                "contract_end": serial_to_date(row[7] if len(row) > 7 else ""),
-            }
-    return None
+    if exact:
+        row = exact[0]
+    elif prefixed:
+        # Der kuerzeste Treffer liegt am naechsten am gekuerzten Blattnamen.
+        row = min(prefixed, key=lambda x: x[0])[1]
+    else:
+        return None
+
+    def cell(i):
+        return num(row[i]) if len(row) > i else None
+
+    raw_ta24 = row[11] if len(row) > 11 else ""
+    return {
+        "ta24": str(raw_ta24).strip().upper() in ("TRUE", "1", "JA", "WAHR"),
+        "balance": cell(2),
+        "due": cell(4),
+        "received": cell(5),
+        "contract_end": serial_to_date(row[7] if len(row) > 7 else ""),
+    }
 
 
 def read_plan(grid):
-    """Der im Blatt gepflegte Zahlungsplan: Spalten F/G/H = Nr, Faelligkeit, Betrag."""
-    r_head, _ = find_label(grid, "Which payments are due", max_col=12)
-    start = r_head + 1 if r_head is not None else 13
+    """Der im Blatt gepflegte Zahlungsplan.
+
+    Die Spalten liegen je nach Alter des Blatts unterschiedlich, deshalb wird
+    die Kopfzelle "due date" gesucht; der Betrag steht rechts daneben.
+    """
+    r_head = c_due = None
+    for r, row in enumerate(grid):
+        for c, v in enumerate(row[:14]):
+            if isinstance(v, str) and v.strip().lower() == "due date":
+                r_head, c_due = r, c
+                break
+        if r_head is not None:
+            break
+
+    if c_due is None:
+        return []
 
     plan = []
-    for r in range(start, len(grid)):
+    for r in range(r_head + 1, len(grid)):
         row = grid[r]
-        d = serial_to_date(row[6] if len(row) > 6 else "")
-        a = num(row[7] if len(row) > 7 else "")
+        d = serial_to_date(row[c_due] if len(row) > c_due else "")
+        a = num(row[c_due + 1] if len(row) > c_due + 1 else "")
         if d is None or a is None or d.year >= FILLER_YEAR:
             continue
         plan.append({"due": d, "amount": round(a, 2)})
@@ -160,9 +205,19 @@ def extract(wb, sheet_name):
             return None
         return value_right(grid, r, c)
 
-    rent = num(labelled("Rent per period"))
+    def either(primary, fallback_exact):
+        """Neuere Blaetter tragen ausfuehrliche Beschriftungen, aeltere kurze."""
+        r, c = find_label(grid, primary)
+        if r is None:
+            r, c = find_exact(grid, fallback_exact)
+        if r is None:
+            warnings.append(f'Beschriftung "{primary}" nicht gefunden')
+            return None
+        return value_right(grid, r, c)
+
+    rent = num(either("Rent per period", "Rent"))
     months = num(labelled("payable after x months"))
-    periods = num(labelled("for how many periods"))
+    periods = num(either("for how many periods", "#"))
     start = serial_to_date(labelled("first payment due"))
 
     # Titelzeile: A="Summary", B=<Bezeichnung>
@@ -171,14 +226,26 @@ def extract(wb, sheet_name):
 
     # Mieter steht bei "contract terms" daneben, sofern es keine Vorlage ist.
     tenant = labelled("contract terms")
-    if isinstance(tenant, str) and tenant.strip().lower() in ("vorlage", "template"):
-        tenant = ""
+    if isinstance(tenant, str):
+        # Aeltere Blaetter fuehren dort den Objektnamen statt eines Mieters.
+        if tenant.strip().lower() in ("vorlage", "template") or normalize(
+            tenant
+        ) == normalize(sheet_name):
+            tenant = ""
 
     # --- Mietstaffel: Spalten A/B unterhalb von "Rent adjustments" ---
     r_adj, _ = find_label(grid, "Rent adjustment")
     if r_adj is None:
         r_adj, _ = find_label(grid, "Rent escalation")
-    r_stop, _ = find_label(grid, "Payment Sum")
+    # Die Staffel endet dort, wo der Zahlungsteil beginnt.
+    stops = [
+        r for r, _ in (
+            find_label(grid, "Payment Sum"),
+            find_label(grid, "Payment Date"),
+            find_exact(grid, "Payments"),
+        ) if r is not None
+    ]
+    r_stop = min(stops) if stops else None
 
     escalations = []
     if r_adj is not None:
@@ -196,6 +263,9 @@ def extract(wb, sheet_name):
 
     # --- Zahlungen: unterhalb der Kopfzeile "Payment Date" ---
     r_pay, c_pay = find_label(grid, "Payment Date")
+    if r_pay is None:
+        r_pay, c_pay = find_exact(grid, "Payments")
+
     payments = []
     if r_pay is None:
         warnings.append("Zahlungsliste nicht gefunden")
@@ -243,6 +313,11 @@ def extract(wb, sheet_name):
 
     # --- Kontrollsummen aus dem Blatt ---
     r_ps, c_ps = find_label(grid, "Payment Sum")
+    if r_ps is None:
+        # Aeltere Blaetter fuehren die Summe als Zeile "sum" direkt unter der
+        # Ueberschrift des Zahlungsteils.
+        r_ps, c_ps = find_exact(grid, "sum")
+
     stated_sum = num(value_right(grid, r_ps, c_ps)) if r_ps is not None else None
     if stated_sum is None and r_ps is not None and r_ps + 1 < len(grid):
         # Der Wert steht bei manchen Blaettern eine Zeile tiefer.
