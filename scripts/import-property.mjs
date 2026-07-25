@@ -7,7 +7,10 @@
  * Ohne --ersetzen bricht der Lauf ab, wenn der Name bereits vergeben ist.
  */
 import { createClient } from "@supabase/supabase-js";
+import { addMonths } from "date-fns";
 import { readFileSync } from "node:fs";
+
+const round2 = (n) => Math.round(n * 100) / 100;
 
 for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
   const m = line.match(/^([A-Z_]+)=(.*)$/);
@@ -133,6 +136,53 @@ for (let i = 0; i < rows.length; i += 200) {
 
 const sum = rows.reduce((a, r) => a + r.amount, 0);
 
+/* --- Ausgleichsgutschrift ---
+ * Die alte Tabelle enthält manuelle Beträge, die nur im Saldo stehen und in
+ * keinem Zahlungsplan auftauchen. Damit der Saldo nach der Übernahme dem
+ * bisherigen Stand entspricht, wird die Differenz als Gutschrift erfasst.
+ * Die Fälligkeiten werden dafür exakt so berechnet wie in der Anwendung.
+ */
+const rateAt = (date) => {
+  let best = null;
+  for (const p of periods) {
+    const from = new Date(`${p.valid_from}T12:00:00Z`);
+    if (date < from) continue;
+    if (p.valid_to && date > new Date(`${p.valid_to}T12:00:00Z`)) continue;
+    if (!best || from > new Date(`${best.valid_from}T12:00:00Z`)) best = p;
+  }
+  return best ? best.amount : 0;
+};
+
+const step = data.months_per_period;
+const start = new Date(`${data.start_date}T12:00:00Z`);
+const end = addMonths(start, data.term_months);
+const today = new Date();
+
+let dueToDate = 0;
+for (let i = 0; ; i++) {
+  const due = addMonths(start, i * step);
+  if (due >= end) break;
+  if (due <= today) dueToDate += rateAt(due);
+}
+
+const computedBalance = round2(sum - dueToDate);
+const targetBalance = data.overview?.balance ?? null;
+let credit = null;
+
+if (targetBalance !== null && Math.abs(targetBalance - computedBalance) >= 0.01) {
+  credit = round2(targetBalance - computedBalance);
+  const { error: creditError } = await supabase.from("credits").insert({
+    property_id: property.id,
+    credited_on: new Date().toISOString().slice(0, 10),
+    amount: credit,
+    reason: "Ausgleich aus der Datenübernahme (manuelle Beträge der alten Tabelle)",
+  });
+  if (creditError) {
+    console.error("Gutschrift fehlgeschlagen:", creditError.message);
+    process.exit(1);
+  }
+}
+
 console.log(`
 Objekt:        ${name}
 Mietbeginn:    ${data.start_date}
@@ -142,4 +192,9 @@ Zahlungen:     ${rows.length} (${asSource} mit Quelle, ${asNote} mit Notiz)
 Summe:         ${sum.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR
 Kontrollwert:  ${(data.stated_payment_sum ?? 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR
 Abweichung:    ${(sum - (data.stated_payment_sum ?? 0)).toFixed(2)} EUR
+
+Fällig bisher: ${dueToDate.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR
+Saldo roh:     ${computedBalance.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR
+Saldo alt:     ${targetBalance === null ? "unbekannt" : targetBalance.toLocaleString("de-DE", { minimumFractionDigits: 2 }) + " EUR"}
+Gutschrift:    ${credit === null ? "nicht nötig" : credit.toLocaleString("de-DE", { minimumFractionDigits: 2 }) + " EUR"}
 `);

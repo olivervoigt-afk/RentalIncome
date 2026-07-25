@@ -31,7 +31,10 @@ export default async function PropertiesPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Objekte</h1>
           <p className="mt-1 text-sm text-muted">
-            Verträge, Mietstaffeln und Zahlungen je Objekt verwalten.
+            {rows.length} {rows.length === 1 ? "Objekt" : "Objekte"}
+            {hidden.length > 0 && !showArchived && (
+              <> · {hidden.length} archiviert oder abgelaufen</>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
