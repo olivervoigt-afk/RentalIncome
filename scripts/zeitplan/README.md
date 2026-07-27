@@ -1,6 +1,6 @@
 # Automatische Datensicherung
 
-Sichert den kompletten Datenbestand montags und freitags um 8:00 Uhr nach
+Sichert den kompletten Datenbestand mittwochs und freitags um 8:00 Uhr nach
 `~/Documents/RentalIncomeBackup/`.
 
 ## Was entsteht

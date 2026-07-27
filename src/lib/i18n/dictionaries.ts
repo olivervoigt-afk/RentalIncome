@@ -367,7 +367,7 @@ const de = {
 
     backup: "Datensicherung",
     backupHint:
-      "Lädt den kompletten Bestand als ZIP herunter — je Tabelle eine CSV-Datei für Excel sowie eine JSON-Datei zum Zurückspielen. Zusätzlich läuft montags und freitags eine automatische Sicherung nach Google Drive.",
+      "Lädt den kompletten Bestand als ZIP herunter — je Tabelle eine CSV-Datei für Excel sowie eine JSON-Datei zum Zurückspielen. Zusätzlich läuft mittwochs und freitags eine automatische Sicherung nach Google Drive.",
     backupDownload: "Sicherung herunterladen",
 
     sources: "Zahlungsquellen",
@@ -745,7 +745,7 @@ const en: Dict = {
 
     backup: "Data backup",
     backupHint:
-      "Downloads the entire dataset as a ZIP — one CSV per table for Excel plus a JSON file for restoring. An automatic backup to Google Drive also runs on Mondays and Fridays.",
+      "Downloads the entire dataset as a ZIP — one CSV per table for Excel plus a JSON file for restoring. An automatic backup to Google Drive also runs on Wednesdays and Fridays.",
     backupDownload: "Download backup",
 
     sources: "Payment sources",

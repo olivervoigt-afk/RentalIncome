@@ -11,13 +11,13 @@
     <string>/Users/olivervoigt/Downloads/RentalIncome/scripts/backup.mjs</string>
   </array>
 
-  <!-- Montag (1) und Freitag (5), jeweils 8:00 Uhr.
+  <!-- Mittwoch (3) und Freitag (5), jeweils 8:00 Uhr.
        Ist der Mac zu dem Zeitpunkt aus, holt launchd den Lauf beim
        nächsten Start nach. -->
   <key>StartCalendarInterval</key>
   <array>
     <dict>
-      <key>Weekday</key><integer>1</integer>
+      <key>Weekday</key><integer>3</integer>
       <key>Hour</key><integer>8</integer>
       <key>Minute</key><integer>0</integer>
     </dict>
