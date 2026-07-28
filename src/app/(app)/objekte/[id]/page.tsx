@@ -72,6 +72,10 @@ export default async function PropertyDetailPage({
   } = detail;
   const canEdit = profile?.role !== "viewer";
 
+  const unreadNotes = notes.filter(
+    (note) => note.recipient_id === profile?.id && note.read_at === null,
+  ).length;
+
   const tab: Tab = TABS.includes(query.tab as Tab) ? (query.tab as Tab) : "uebersicht";
   const view: PaymentsView = query.ansicht === "soll" ? "soll" : "eingaenge";
   const year = query.jahr ?? String(new Date().getFullYear());
@@ -143,16 +147,22 @@ export default async function PropertyDetailPage({
         basePath={`/objekte/${property.id}`}
         items={[
           { key: "uebersicht", label: t.property.tabs.overview },
-          {
-            key: "zahlungen",
-            label: t.property.tabs.payments,
-            count: payments.length + credits.length,
-          },
-          { key: "kaution", label: t.deposits.tab, count: deposits.length },
+          /* Bestandszähler stehen bewusst nicht mehr dabei: ob ein Objekt 72
+             oder 73 Zahlungen hat, ändert nichts an dem, was zu tun ist. Die
+             Kaution steht ohnehin oben als Kennzahl. Übrig bleiben die zwei
+             Zahlen, die eine Frage beantworten: liegt hier ein Vertrag, und
+             wartet etwas Ungelesenes auf mich. */
+          { key: "zahlungen", label: t.property.tabs.payments },
+          { key: "kaution", label: t.deposits.tab },
           { key: "dokumente", label: t.property.tabs.documents, count: documents.length },
-          { key: "notizen", label: t.property.tabs.notes, count: notes.length },
+          {
+            key: "notizen",
+            label: t.property.tabs.notes,
+            count: unreadNotes,
+            highlight: true,
+          },
           ...(history.length > 0
-            ? [{ key: "historie", label: t.property.tabs.history, count: history.length }]
+            ? [{ key: "historie", label: t.property.tabs.history }]
             : []),
         ]}
       />

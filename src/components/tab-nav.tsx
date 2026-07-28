@@ -3,8 +3,14 @@ import Link from "next/link";
 export type TabItem = {
   key: string;
   label: string;
-  /** Wird als kleine Zahl hinter dem Namen angezeigt. */
+  /**
+   * Kleine Zahl hinter dem Namen. Nur setzen, wenn sie zu etwas auffordert —
+   * ein reiner Bestandszähler sieht aus wie eine Benachrichtigung und
+   * gewöhnt einem ab, überhaupt hinzuschauen.
+   */
   count?: number;
+  /** Hervorgehoben, wenn die Zahl Handlungsbedarf bedeutet. */
+  highlight?: boolean;
 };
 
 /**
@@ -42,7 +48,15 @@ export default function TabNav({
             >
               {item.label}
               {item.count !== undefined && item.count > 0 && (
-                <span className="ml-1.5 text-xs text-muted">{item.count}</span>
+                <span
+                  className={
+                    item.highlight
+                      ? "ml-1.5 rounded-full bg-accent px-1.5 py-px text-[11px] font-medium text-white"
+                      : "ml-1.5 text-xs text-muted"
+                  }
+                >
+                  {item.count}
+                </span>
               )}
             </Link>
           );
