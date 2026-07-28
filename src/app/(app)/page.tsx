@@ -9,6 +9,12 @@ import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Dashboard" };
 
+/** Vorwarnzeit, ab der ein auslaufender Vertrag Aufmerksamkeit verdient. */
+const ENDING_SOON_DAYS = 90;
+
+/** Rundungsreste sollen kein Objekt in den Rückstand schreiben. */
+const CENT = 0.005;
+
 type Totals = {
   due: number;
   received: number;
@@ -31,12 +37,20 @@ function sum(list: PropertyWithSummary[]): Totals {
   );
 }
 
+/** Verbleibende Tage bis zum Vertragsende. */
+function daysUntil(end: Date, now: Date): number {
+  return Math.ceil((end.getTime() - now.getTime()) / 86_400_000);
+}
+
+const VIEWS = ["rueckstand", "kaution", "ende"] as const;
+type View = (typeof VIEWS)[number];
+
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archiv?: string }>;
+  searchParams: Promise<{ archiv?: string; blick?: string }>;
 }) {
-  const { archiv } = await searchParams;
+  const { archiv, blick } = await searchParams;
   const showArchived = archiv === "1";
 
   const [profile, all, { t, locale }] = await Promise.all([
@@ -48,11 +62,40 @@ export default async function DashboardPage({
   const NO_LOCATION = t.dashboard.noLocation;
 
   const canEdit = profile?.role !== "viewer";
-  const hidden = all.filter((p) => p.archived || p.summary.expired);
-  const rows = showArchived ? all : all.filter((p) => !p.archived && !p.summary.expired);
+  const now = new Date();
+  const year = now.getFullYear();
 
+  const hidden = all.filter((p) => p.archived || p.summary.expired);
+  const active = showArchived ? all : all.filter((p) => !p.archived && !p.summary.expired);
+
+  /* Kennzahlen beziehen sich immer auf die aktiven Objekte — ein Rückstand
+   * auf einem beendeten Vertrag ist kein Handlungsbedarf mehr. */
+  const inArrears = active.filter((p) => p.summary.balance < -CENT);
+  const withDeposit = active.filter((p) => p.deposit.held > 0);
+  const endingSoon = active.filter((p) => {
+    const days = daysUntil(p.summary.contractEnd, now);
+    return days > 0 && days <= ENDING_SOON_DAYS;
+  });
+  const incomeThisYear = active.reduce((total, p) => total + p.receivedThisYear, 0);
+
+  // Die Kacheln beschreiben immer den vollen aktiven Bestand, auch während
+  // ein Filter läuft — sonst zeigte die Kachel ihre eigene Auswahl an.
+  const activeTotals = sum(active);
+  const arrearsTotal = sum(inArrears).balance;
+
+  const view: View | null = VIEWS.includes(blick as View) ? (blick as View) : null;
+  const filtered =
+    view === "rueckstand"
+      ? inArrears
+      : view === "kaution"
+        ? withDeposit
+        : view === "ende"
+          ? endingSoon
+          : active;
+
+  const rows = filtered;
   const totals = sum(rows);
-  const hiddenTotals = showArchived ? null : sum(hidden);
+  const hiddenTotals = showArchived || view ? null : sum(hidden);
 
   // Gruppierung nach Standort; Objekte ohne Standort stehen am Ende.
   const groups = new Map<string, PropertyWithSummary[]>();
@@ -67,7 +110,19 @@ export default async function DashboardPage({
     return a.localeCompare(b, "de");
   });
 
-  const columnCount = canEdit ? 9 : 8;
+  const columnCount = canEdit ? 7 : 6;
+
+  const viewLabel =
+    view === "rueckstand"
+      ? t.dashboard.arrears
+      : view === "kaution"
+        ? t.dashboard.depositsHeld
+        : view === "ende"
+          ? t.dashboard.endingSoon
+          : "";
+
+  const withArchive = (query: string) =>
+    showArchived ? `${query}${query.includes("?") ? "&" : "?"}archiv=1` : query;
 
   return (
     <div className="space-y-6">
@@ -75,7 +130,7 @@ export default async function DashboardPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t.dashboard.title}</h1>
           <p className="mt-1 text-sm text-muted">
-            {plural(t.dashboard.countProperties, rows.length)}
+            {plural(t.dashboard.countProperties, active.length)}
             {orderedGroups.length > 1 &&
               fill(t.dashboard.inLocations, { n: orderedGroups.length })}
             {hidden.length > 0 &&
@@ -86,30 +141,74 @@ export default async function DashboardPage({
         {canEdit && <ButtonLink href="/objekte/neu">{t.dashboard.newProperty}</ButtonLink>}
       </div>
 
+      {/* Was heute Aufmerksamkeit verdient — jede Kachel filtert die Tabelle.
+          Kumulierte Lebenssummen standen hier früher, beantworteten aber
+          keine Frage, die man beim Öffnen hat. */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label={t.dashboard.dueSoFar} value={f.euro(totals.due)} />
-        <StatCard label={t.dashboard.received} value={f.euro(totals.received)} />
-        <StatCard label={t.dashboard.credits} value={f.euro(totals.credits)} />
         <StatCard
-          label={t.dashboard.balance}
-          value={f.euro(totals.balance)}
-          tone={totals.balance < 0 ? "negative" : "positive"}
+          label={t.dashboard.arrears}
+          value={f.euro(arrearsTotal)}
+          hint={
+            inArrears.length > 0
+              ? plural(t.dashboard.countProperties, inArrears.length)
+              : t.dashboard.arrearsNone
+          }
+          tone={inArrears.length > 0 ? "negative" : undefined}
+          href={inArrears.length > 0 ? withArchive("/?blick=rueckstand") : undefined}
+          active={view === "rueckstand"}
+        />
+        <StatCard
+          label={fill(t.dashboard.incomeYear, { year })}
+          value={f.euro(incomeThisYear)}
+          hint={t.dashboard.incomeYearHint}
+          href="/auswertungen"
+        />
+        <StatCard
+          label={t.dashboard.depositsHeld}
+          value={f.euro(activeTotals.deposit)}
+          hint={t.dashboard.depositsHint}
+          href={withDeposit.length > 0 ? withArchive("/?blick=kaution") : undefined}
+          active={view === "kaution"}
+        />
+        <StatCard
+          label={t.dashboard.endingSoon}
+          value={String(endingSoon.length)}
+          hint={
+            endingSoon.length > 0 ? t.dashboard.endingSoonHint : t.dashboard.endingSoonNone
+          }
+          tone={endingSoon.length > 0 ? "negative" : undefined}
+          href={endingSoon.length > 0 ? withArchive("/?blick=ende") : undefined}
+          active={view === "ende"}
         />
       </div>
 
       <Card>
-        <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <h2 className="text-base font-semibold">{t.dashboard.overview}</h2>
-          <ArchiveToggle active={showArchived} count={hidden.length} />
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
+          <h2 className="text-base font-semibold">
+            {t.dashboard.overview}
+            {view && (
+              <span className="ml-2 text-sm font-normal text-muted">
+                {fill(t.dashboard.filtered, { label: viewLabel })}
+              </span>
+            )}
+          </h2>
+          {view ? (
+            <Link
+              href={withArchive("/")}
+              className="text-sm text-accent hover:underline"
+            >
+              {t.dashboard.showAll}
+            </Link>
+          ) : (
+            <ArchiveToggle active={showArchived} count={hidden.length} />
+          )}
         </div>
 
         {rows.length === 0 ? (
           <EmptyState
             title={all.length === 0 ? t.dashboard.emptyTitle : t.dashboard.emptyNoActive}
             description={
-              all.length === 0
-                ? t.dashboard.emptyHint
-                : t.dashboard.emptyArchivedHint
+              all.length === 0 ? t.dashboard.emptyHint : t.dashboard.emptyArchivedHint
             }
             action={
               canEdit && all.length === 0 ? (
@@ -122,16 +221,14 @@ export default async function DashboardPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                  <th className="w-[30%] min-w-[240px] px-5 py-3 font-medium">
+                  <th className="w-[34%] min-w-[260px] px-5 py-3 font-medium">
                     {t.dashboard.property}
                   </th>
                   <th className="px-5 py-3 text-right font-medium">{t.dashboard.dueSoFar}</th>
                   <th className="px-5 py-3 text-right font-medium">{t.dashboard.received}</th>
                   <th className="px-5 py-3 text-right font-medium">{t.dashboard.balance}</th>
                   <th className="px-5 py-3 text-right font-medium">{t.deposits.title}</th>
-                  <th className="px-5 py-3 text-right font-medium">{t.dashboard.remaining}</th>
                   <th className="px-5 py-3 font-medium">{t.dashboard.contractEnd}</th>
-                  <th className="px-5 py-3 text-center font-medium">TA24</th>
                   {canEdit && <th className="px-5 py-3" />}
                 </tr>
               </thead>
@@ -147,86 +244,93 @@ export default async function DashboardPage({
                         colSpan={columnCount}
                         className="border-l-4 border-accent px-5 py-3 text-left"
                       >
-                        <span className="text-lg font-bold tracking-tight">
-                          {location}
-                        </span>
+                        <span className="text-lg font-bold tracking-tight">{location}</span>
                         <span className="ml-3 text-sm font-normal text-muted">
                           {plural(t.dashboard.countProperties, items.length)}
                         </span>
                       </th>
                     </tr>
 
-                    {items.map((p) => (
-                      <tr
-                        key={p.id}
-                        className="border-b border-border/60 hover:bg-surface-muted/40"
-                      >
-                        <td className="px-5 py-3 align-top">
-                          <Link
-                            href={`/objekte/${p.id}`}
-                            className="font-medium text-balance hover:text-accent hover:underline"
-                          >
-                            {p.name}
-                          </Link>
-                          {p.tenant_name && (
-                            <span className="block text-xs text-muted">{p.tenant_name}</span>
-                          )}
-                          <div className="mt-0.5 flex flex-wrap gap-1.5">
-                            {p.archived && <Badge>{t.dashboard.archived}</Badge>}
-                            {!p.archived && p.summary.expired && <Badge>{t.dashboard.expired}</Badge>}
-                            {p.summary.hasMissingRates && (
-                              <Badge tone="negative">{t.dashboard.missingRate}</Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="tabular px-5 py-3 text-right">
-                          {f.euro(p.summary.totalDue)}
-                        </td>
-                        <td className="tabular px-5 py-3 text-right">
-                          {f.euro(p.summary.totalReceived)}
-                          {p.summary.totalCredits > 0 && (
-                            <span className="block text-xs text-muted">
-                              {fill(t.dashboard.creditSuffix, { amount: f.euro(p.summary.totalCredits) })}
-                            </span>
-                          )}
-                        </td>
-                        <td
-                          className={`tabular px-5 py-3 text-right font-medium ${
-                            p.summary.balance < 0 ? "text-negative" : "text-positive"
-                          }`}
+                    {items.map((p) => {
+                      const days = daysUntil(p.summary.contractEnd, now);
+                      const soon = days > 0 && days <= ENDING_SOON_DAYS;
+
+                      return (
+                        <tr
+                          key={p.id}
+                          className="border-b border-border/60 hover:bg-surface-muted/40"
                         >
-                          {f.euro(p.summary.balance)}
-                        </td>
-                        <td className="tabular px-5 py-3 text-right text-muted">
-                          {p.deposit.held > 0 ? f.euro(p.deposit.held) : t.common.none}
-                        </td>
-                        <td className="tabular px-5 py-3 text-right text-muted">
-                          {p.summary.remainingMonths > 0
-                            ? fill(t.dashboard.months, { n: p.summary.remainingMonths })
-                            : t.common.none}
-                        </td>
-                        <td className="px-5 py-3 text-muted">
-                          {f.date(p.summary.contractEnd)}
-                        </td>
-                        <td className="px-5 py-3 text-center">
-                          {p.ta24 ? (
-                            <Badge tone="accent">✓</Badge>
-                          ) : (
-                            <span className="text-muted">—</span>
-                          )}
-                        </td>
-                        {canEdit && (
-                          <td className="px-5 py-3 text-right">
+                          <td className="px-5 py-3 align-top">
                             <Link
-                              href={`/objekte/${p.id}?tab=zahlungen`}
-                              className="whitespace-nowrap text-sm text-accent hover:underline"
+                              href={`/objekte/${p.id}`}
+                              className="font-medium text-balance hover:text-accent hover:underline"
                             >
-                              {t.dashboard.addPayment}
+                              {p.name}
                             </Link>
+                            {p.tenant_name && (
+                              <span className="block text-xs text-muted">{p.tenant_name}</span>
+                            )}
+                            {/* Kennzeichen am Namen statt in eigenen Spalten —
+                                sie sind selten und kosten sonst volle Breite. */}
+                            <div className="mt-0.5 flex flex-wrap gap-1.5">
+                              {p.ta24 && <Badge tone="accent">TA24</Badge>}
+                              {p.archived && <Badge>{t.dashboard.archived}</Badge>}
+                              {!p.archived && p.summary.expired && (
+                                <Badge>{t.dashboard.expired}</Badge>
+                              )}
+                              {p.summary.hasMissingRates && (
+                                <Badge tone="negative">{t.dashboard.missingRate}</Badge>
+                              )}
+                            </div>
                           </td>
-                        )}
-                      </tr>
-                    ))}
+                          <td className="tabular px-5 py-3 text-right">
+                            {f.euro(p.summary.totalDue)}
+                          </td>
+                          <td className="tabular px-5 py-3 text-right">
+                            {f.euro(p.summary.totalReceived)}
+                            {p.summary.totalCredits > 0 && (
+                              <span className="block text-xs text-muted">
+                                {fill(t.dashboard.creditSuffix, {
+                                  amount: f.euro(p.summary.totalCredits),
+                                })}
+                              </span>
+                            )}
+                          </td>
+                          <td
+                            className={`tabular px-5 py-3 text-right font-medium ${
+                              p.summary.balance < -CENT ? "text-negative" : "text-positive"
+                            }`}
+                          >
+                            {f.euro(p.summary.balance)}
+                          </td>
+                          <td className="tabular px-5 py-3 text-right text-muted">
+                            {p.deposit.held > 0 ? f.euro(p.deposit.held) : t.common.none}
+                          </td>
+                          {/* Vertragsende und Restlaufzeit sagten dasselbe
+                              zweimal; die Restlaufzeit steht jetzt darunter. */}
+                          <td className="px-5 py-3">
+                            <span className={soon ? "font-medium text-negative" : "text-muted"}>
+                              {f.date(p.summary.contractEnd)}
+                            </span>
+                            {p.summary.remainingMonths > 0 && (
+                              <span className="block text-xs text-muted">
+                                {fill(t.dashboard.months, { n: p.summary.remainingMonths })}
+                              </span>
+                            )}
+                          </td>
+                          {canEdit && (
+                            <td className="px-5 py-3 text-right">
+                              <Link
+                                href={`/objekte/${p.id}?tab=zahlungen`}
+                                className="whitespace-nowrap text-sm text-accent hover:underline"
+                              >
+                                {t.dashboard.addPayment}
+                              </Link>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
 
                     {orderedGroups.length > 1 && (
                       <tr className="border-b border-border text-muted">
@@ -243,7 +347,7 @@ export default async function DashboardPage({
                         <td className="tabular px-5 py-2 text-right">
                           {groupTotals.deposit > 0 ? f.euro(groupTotals.deposit) : ""}
                         </td>
-                        <td colSpan={canEdit ? 4 : 3} />
+                        <td colSpan={canEdit ? 2 : 1} />
                       </tr>
                     )}
                   </tbody>
@@ -254,20 +358,16 @@ export default async function DashboardPage({
                 <tr className="border-t-2 border-border bg-surface-muted/50 font-medium">
                   <td className="px-5 py-3">{t.dashboard.total}</td>
                   <td className="tabular px-5 py-3 text-right">{f.euro(totals.due)}</td>
-                  <td className="tabular px-5 py-3 text-right">
-                    {f.euro(totals.received)}
-                  </td>
+                  <td className="tabular px-5 py-3 text-right">{f.euro(totals.received)}</td>
                   <td
                     className={`tabular px-5 py-3 text-right ${
-                      totals.balance < 0 ? "text-negative" : "text-positive"
+                      totals.balance < -CENT ? "text-negative" : "text-positive"
                     }`}
                   >
                     {f.euro(totals.balance)}
                   </td>
-                  <td className="tabular px-5 py-3 text-right">
-                    {f.euro(totals.deposit)}
-                  </td>
-                  <td colSpan={canEdit ? 4 : 3} />
+                  <td className="tabular px-5 py-3 text-right">{f.euro(totals.deposit)}</td>
+                  <td colSpan={canEdit ? 2 : 1} />
                 </tr>
 
                 {hiddenTotals && hidden.length > 0 && (
@@ -288,7 +388,7 @@ export default async function DashboardPage({
                       <td className="tabular px-5 py-2 text-right">
                         {f.euro(hiddenTotals.deposit)}
                       </td>
-                      <td colSpan={canEdit ? 4 : 3} />
+                      <td colSpan={canEdit ? 2 : 1} />
                     </tr>
                     <tr className="border-t border-border font-medium">
                       <td className="px-5 py-2">{t.dashboard.allProperties}</td>
@@ -300,7 +400,7 @@ export default async function DashboardPage({
                       </td>
                       <td
                         className={`tabular px-5 py-2 text-right ${
-                          totals.balance + hiddenTotals.balance < 0
+                          totals.balance + hiddenTotals.balance < -CENT
                             ? "text-negative"
                             : "text-positive"
                         }`}
@@ -310,7 +410,7 @@ export default async function DashboardPage({
                       <td className="tabular px-5 py-2 text-right">
                         {f.euro(totals.deposit + hiddenTotals.deposit)}
                       </td>
-                      <td colSpan={canEdit ? 4 : 3} />
+                      <td colSpan={canEdit ? 2 : 1} />
                     </tr>
                   </>
                 )}
@@ -326,14 +426,21 @@ export default async function DashboardPage({
 function StatCard({
   label,
   value,
+  hint,
   tone,
+  href,
+  active,
 }: {
   label: string;
   value: string;
+  hint?: string;
   tone?: "positive" | "negative";
+  /** Macht die Kachel zum Filter bzw. zur Verknüpfung. */
+  href?: string;
+  active?: boolean;
 }) {
-  return (
-    <Card className="px-5 py-4">
+  const body = (
+    <>
       <p className="text-sm text-muted">{label}</p>
       <p
         className={`tabular mt-1 text-2xl font-semibold ${
@@ -342,6 +449,21 @@ function StatCard({
       >
         {value}
       </p>
+      {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
+    </>
+  );
+
+  if (!href) return <Card className="px-5 py-4">{body}</Card>;
+
+  return (
+    <Card
+      className={`transition-colors hover:border-accent/60 ${
+        active ? "border-accent ring-1 ring-accent/30" : ""
+      }`}
+    >
+      <Link href={href} className="block px-5 py-4">
+        {body}
+      </Link>
     </Card>
   );
 }

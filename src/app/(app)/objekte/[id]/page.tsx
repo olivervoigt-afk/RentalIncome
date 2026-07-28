@@ -24,7 +24,6 @@ import { fill } from "@/lib/i18n/dictionaries";
 const TABS = [
   "uebersicht",
   "zahlungen",
-  "gutschriften",
   "kaution",
   "dokumente",
   "notizen",
@@ -144,8 +143,11 @@ export default async function PropertyDetailPage({
         basePath={`/objekte/${property.id}`}
         items={[
           { key: "uebersicht", label: t.property.tabs.overview },
-          { key: "zahlungen", label: t.property.tabs.payments, count: payments.length },
-          { key: "gutschriften", label: t.property.tabs.credits, count: credits.length },
+          {
+            key: "zahlungen",
+            label: t.property.tabs.payments,
+            count: payments.length + credits.length,
+          },
           { key: "kaution", label: t.deposits.tab, count: deposits.length },
           { key: "dokumente", label: t.property.tabs.documents, count: documents.length },
           { key: "notizen", label: t.property.tabs.notes, count: notes.length },
@@ -167,22 +169,33 @@ export default async function PropertyDetailPage({
       )}
 
       {tab === "zahlungen" && (
-        <PaymentsTab
-          t={t}
-          f={f}
-          property={property}
-          periods={periods}
-          payments={payments}
-          sources={sources}
-          canEdit={canEdit}
-          view={view}
-          year={year}
-          page={page}
-        />
-      )}
+        <div className="space-y-6">
+          <PaymentsTab
+            t={t}
+            f={f}
+            property={property}
+            periods={periods}
+            payments={payments}
+            sources={sources}
+            canEdit={canEdit}
+            view={view}
+            year={year}
+            page={page}
+          />
 
-      {tab === "gutschriften" && (
-        <CreditsTab t={t} f={f} propertyId={property.id} credits={credits} canEdit={canEdit} />
+          {/* Gutschriften stehen bei den Zahlungen: beides sind Geldbewegungen
+              gegen die Miete, und Gutschriften sind zu selten für einen
+              eigenen Reiter. In der Soll-Ansicht wären sie fehl am Platz. */}
+          {view === "eingaenge" && (
+            <CreditsTab
+              t={t}
+              f={f}
+              propertyId={property.id}
+              credits={credits}
+              canEdit={canEdit}
+            />
+          )}
+        </div>
       )}
 
       {tab === "kaution" && (

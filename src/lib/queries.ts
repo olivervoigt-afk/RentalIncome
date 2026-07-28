@@ -20,6 +20,8 @@ export type PropertyWithSummary = Property & {
   summary: PropertySummary;
   /** Kautionen — bewusst getrennt vom Saldo geführt. */
   deposit: DepositSummary;
+  /** Im laufenden Kalenderjahr eingegangene Miete. */
+  receivedThisYear: number;
   /** Aufgelöster Standortname, null wenn keiner hinterlegt ist. */
   location: string | null;
 };
@@ -84,6 +86,7 @@ export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]>
     ((locations.data ?? []) as Location[]).map((l) => [l.id, l.name]),
   );
   const now = new Date();
+  const thisYear = String(now.getFullYear());
 
   return (properties.data as Property[]).map((property) => ({
     ...property,
@@ -91,6 +94,9 @@ export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]>
       ? (locationName.get(property.location_id) ?? null)
       : null,
     deposit: summarizeDeposits(byDeposit.get(property.id) ?? []),
+    receivedThisYear: (byPayment.get(property.id) ?? [])
+      .filter((payment) => payment.paid_on.startsWith(thisYear))
+      .reduce((total, payment) => total + Number(payment.amount), 0),
     summary: summarize(
       property,
       byPeriod.get(property.id) ?? [],
@@ -167,17 +173,7 @@ export async function getPropertyDetail(
   };
 }
 
-export type Ta24Row = {
-  propertyId: string;
-  name: string;
-  location: string | null;
-  archived: boolean;
-  /** Je Kalenderjahr: Anzahl und Summe der Eingänge sowie steuerliche Minderungen. */
-  byYear: Map<number, Ta24Cell>;
-  total: number;
-};
-
-export type Ta24Cell = {
+export type YearCell = {
   count: number;
   /** Tatsächlich eingegangene Zahlungen. */
   sum: number;
@@ -186,166 +182,6 @@ export type Ta24Cell = {
   /** sum − reductions. */
   taxable: number;
 };
-
-export type Ta24Report = {
-  years: number[];
-  rows: Ta24Row[];
-  /** Summe aller Objekte je Jahr. */
-  totalsByYear: Map<number, Ta24Cell>;
-  grandTotal: number;
-  /** true, sobald irgendwo eine steuermindernde Gutschrift vorliegt. */
-  hasReductions: boolean;
-};
-
-/**
- * Auswertung für die maltesische Steuererklärung.
- *
- * Maßgeblich ist das **Zahlungsdatum**, nicht die Fälligkeit: eine im Januar
- * eingegangene Dezembermiete zählt ins Januar-Jahr (Ist-Prinzip). Archivierte
- * Objekte bleiben enthalten, da ihre Zahlungen zu vergangenen Jahren gehören.
- *
- * Gutschriften zählen nur, wenn sie ausdrücklich als steuermindernd
- * gekennzeichnet sind — etwa bei einer Erstattung bereits erhaltener Miete.
- * Eine von vornherein erlassene Miete erscheint ohnehin nicht als Eingang.
- */
-export async function getTa24Report(): Promise<Ta24Report> {
-  const supabase = await createClient();
-
-  const [propertiesResult, locationsResult, payments, credits, deposits] =
-    await Promise.all([
-      supabase.from("properties").select("*").eq("ta24", true).order("name"),
-      supabase.from("locations").select("*"),
-      fetchAll<Payment>(supabase, "payments"),
-      fetchAll<Credit>(supabase, "credits"),
-      fetchAll<Deposit>(supabase, "deposits"),
-    ]);
-
-  if (propertiesResult.error) throw propertiesResult.error;
-
-  const properties = (propertiesResult.data ?? []) as Property[];
-  const locationName = new Map(
-    ((locationsResult.data ?? []) as Location[]).map((l) => [l.id, l.name]),
-  );
-  const relevant = new Set(properties.map((p) => p.id));
-  const byProperty = new Map<string, Payment[]>();
-
-  for (const payment of payments) {
-    if (!relevant.has(payment.property_id)) continue;
-    byProperty.set(payment.property_id, [
-      ...(byProperty.get(payment.property_id) ?? []),
-      payment,
-    ]);
-  }
-
-  // Verwahrte Kautionen sind keine Einnahme — nur der Einbehalt ist eine.
-  // Wurde er gegen einen Mietrückstand verrechnet, steckt er schon in den
-  // Zahlungen; taxableRetentions() lässt ihn deshalb aus.
-  const retentionsByProperty = groupBy(
-    taxableRetentions(deposits).filter((d) => relevant.has(d.property_id)),
-  );
-
-  const creditsByProperty = new Map<string, Credit[]>();
-  let hasReductions = false;
-
-  for (const credit of credits) {
-    if (!relevant.has(credit.property_id) || !credit.reduces_ta24) continue;
-    hasReductions = true;
-    creditsByProperty.set(credit.property_id, [
-      ...(creditsByProperty.get(credit.property_id) ?? []),
-      credit,
-    ]);
-  }
-
-  const emptyCell = (): Ta24Cell => ({ count: 0, sum: 0, reductions: 0, taxable: 0 });
-
-  const years = new Set<number>();
-  const totalsByYear = new Map<number, Ta24Cell>();
-  let grandTotal = 0;
-
-  const rows: Ta24Row[] = properties.map((property) => {
-    const byYear = new Map<number, Ta24Cell>();
-    let total = 0;
-
-    for (const payment of byProperty.get(property.id) ?? []) {
-      const year = Number(payment.paid_on.slice(0, 4));
-      const amount = Number(payment.amount);
-
-      years.add(year);
-
-      const cell = byYear.get(year) ?? emptyCell();
-      cell.count += 1;
-      cell.sum += amount;
-      byYear.set(year, cell);
-
-      const overall = totalsByYear.get(year) ?? emptyCell();
-      overall.count += 1;
-      overall.sum += amount;
-      totalsByYear.set(year, overall);
-    }
-
-    for (const retention of retentionsByProperty.get(property.id) ?? []) {
-      const year = Number(retention.happened_on.slice(0, 4));
-      const amount = Number(retention.amount);
-
-      years.add(year);
-
-      const cell = byYear.get(year) ?? emptyCell();
-      cell.count += 1;
-      cell.sum += amount;
-      byYear.set(year, cell);
-
-      const overall = totalsByYear.get(year) ?? emptyCell();
-      overall.count += 1;
-      overall.sum += amount;
-      totalsByYear.set(year, overall);
-    }
-
-    // Steuermindernde Gutschriften im Jahr ihrer Erfassung abziehen.
-    for (const credit of creditsByProperty.get(property.id) ?? []) {
-      const year = Number(credit.credited_on.slice(0, 4));
-      const amount = Number(credit.amount);
-
-      years.add(year);
-
-      const cell = byYear.get(year) ?? emptyCell();
-      cell.reductions += amount;
-      byYear.set(year, cell);
-
-      const overall = totalsByYear.get(year) ?? emptyCell();
-      overall.reductions += amount;
-      totalsByYear.set(year, overall);
-    }
-
-    for (const cell of byYear.values()) {
-      cell.taxable = cell.sum - cell.reductions;
-      total += cell.taxable;
-    }
-    grandTotal += total;
-
-    return {
-      propertyId: property.id,
-      name: property.name,
-      location: property.location_id
-        ? (locationName.get(property.location_id) ?? null)
-        : null,
-      archived: property.archived,
-      byYear,
-      total,
-    };
-  });
-
-  for (const cell of totalsByYear.values()) {
-    cell.taxable = cell.sum - cell.reductions;
-  }
-
-  return {
-    years: [...years].sort((a, b) => b - a),
-    rows,
-    totalsByYear,
-    grandTotal,
-    hasReductions,
-  };
-}
 
 export async function getLocations(): Promise<Location[]> {
   const supabase = await createClient();
@@ -383,7 +219,9 @@ export type IncomeRow = {
   location: string | null;
   archived: boolean;
   tenant: string;
-  byYear: Map<number, Ta24Cell>;
+  /** Objekt trägt das TA24-Kennzeichen für die maltesische Erklärung. */
+  ta24: boolean;
+  byYear: Map<number, YearCell>;
 };
 
 export type IncomeReport = {
@@ -435,7 +273,7 @@ export async function getAnnualIncome(): Promise<IncomeReport> {
       : null;
     if (location) locations.add(location);
 
-    const byYear = new Map<number, Ta24Cell>();
+    const byYear = new Map<number, YearCell>();
 
     for (const payment of byPayment.get(property.id) ?? []) {
       const year = Number(payment.paid_on.slice(0, 4));
@@ -481,6 +319,7 @@ export async function getAnnualIncome(): Promise<IncomeReport> {
       location,
       archived: property.archived,
       tenant: property.tenant_name,
+      ta24: property.ta24,
       byYear,
     };
   });

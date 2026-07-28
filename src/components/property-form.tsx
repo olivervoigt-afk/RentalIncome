@@ -47,8 +47,12 @@ export default function PropertyForm({
           label={t.form.location}
           hint={t.form.locationHint}
         >
-          <Select name="location_id" defaultValue={property?.location_id ?? ""}>
-            <option value="">{t.form.noLocation}</option>
+          {/* Der Standort ist Pflicht: Dashboard und Auswertungen gruppieren
+              danach, ein Objekt ohne Zuordnung fiele überall durchs Raster. */}
+          <Select name="location_id" required defaultValue={property?.location_id ?? ""}>
+            <option value="" disabled>
+              {t.form.chooseLocation}
+            </option>
             {locations
               .filter((l) => l.active || l.id === property?.location_id)
               .map((l) => (

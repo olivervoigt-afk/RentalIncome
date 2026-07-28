@@ -64,14 +64,13 @@ export default function Nav({
 }) {
   const pathname = usePathname();
 
-  // Das Dashboard erreicht man über den Namen links, die Einstellungen über
-  // das Zahnrad — beide brauchen deshalb keinen eigenen Eintrag.
+  // Das Dashboard erreicht man über den Namen links, Verwaltung und
+  // Benutzer über das Zahnrad — beide brauchen keinen eigenen Eintrag.
+  // Übrig bleibt, was man täglich braucht.
   const links = [
-    { href: "/ta24", label: t.nav.ta24 },
-    { href: "/einnahmen", label: t.nav.income },
+    { href: "/auswertungen", label: t.nav.reports, badge: 0 },
     { href: "/notizen", label: t.nav.notes, badge: unreadNotes },
-    { href: "/benutzer", label: t.nav.users, adminOnly: true },
-  ].filter((link) => !link.adminOnly || profile.role === "admin");
+  ];
 
   const onSettings = pathname.startsWith("/einstellungen");
 

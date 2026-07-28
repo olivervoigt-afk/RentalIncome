@@ -3,24 +3,24 @@ import { Badge, ButtonLink, Card, CardHeader, EmptyState } from "@/components/ui
 import { formatters } from "@/lib/format";
 import { getDict } from "@/lib/i18n";
 import { fill, plural, type Dict } from "@/lib/i18n/dictionaries";
-import { getAnnualIncome, type IncomeRow, type Ta24Cell } from "@/lib/queries";
+import { getAnnualIncome, type IncomeRow, type YearCell } from "@/lib/queries";
 
-export const metadata = { title: "Jahreseinnahmen" };
+export const metadata = { title: "Auswertungen" };
 
-/** Kennung für Objekte ohne Standort — als Wert in der Adresse. */
-const WITHOUT = "ohne";
+/** Filterwerte in der Adresszeile. Standortnamen stehen für sich selbst. */
 const ALL = "alle";
+const TA24 = "ta24";
 
-const emptyCell = (): Ta24Cell => ({ count: 0, sum: 0, reductions: 0, taxable: 0 });
+const emptyCell = (): YearCell => ({ count: 0, sum: 0, reductions: 0, taxable: 0 });
 
-function addTo(target: Ta24Cell, cell: Ta24Cell) {
+function addTo(target: YearCell, cell: YearCell) {
   target.count += cell.count;
   target.sum += cell.sum;
   target.reductions += cell.reductions;
   target.taxable += cell.taxable;
 }
 
-export default async function IncomePage({
+export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<{ standort?: string; jahr?: string }>;
@@ -29,19 +29,15 @@ export default async function IncomePage({
   const [report, { t, locale }] = await Promise.all([getAnnualIncome(), getDict()]);
   const f = formatters(locale);
 
-  // Deutschland ist die Voreinstellung; sonst der erste vorhandene Standort.
-  const preferred = report.locations.includes("Deutschland")
-    ? "Deutschland"
-    : (report.locations[0] ?? ALL);
-
-  const choices = [...report.locations, WITHOUT, ALL];
-  const location = standort && choices.includes(standort) ? standort : preferred;
+  // "Alle" ist die neutrale Voreinstellung; die Auswahl steht einen Klick weit.
+  const choices = [ALL, ...report.locations, TA24];
+  const location = standort && choices.includes(standort) ? standort : ALL;
 
   const rows = report.rows.filter((row) =>
     location === ALL
       ? true
-      : location === WITHOUT
-        ? row.location === null
+      : location === TA24
+        ? row.ta24
         : row.location === location,
   );
 
@@ -50,7 +46,7 @@ export default async function IncomePage({
     rows.some((row) => (row.byYear.get(year)?.count ?? 0) > 0),
   );
 
-  const totalsByYear = new Map<number, Ta24Cell>();
+  const totalsByYear = new Map<number, YearCell>();
   for (const row of rows) {
     for (const [year, cell] of row.byYear) {
       const target = totalsByYear.get(year) ?? emptyCell();
@@ -72,20 +68,20 @@ export default async function IncomePage({
 
   const label = (value: string) =>
     value === ALL
-      ? t.income.allLocations
-      : value === WITHOUT
-        ? t.income.noLocation
+      ? t.reports.all
+      : value === TA24
+        ? t.reports.ta24
         : value;
 
   const exportHref = (year?: number) =>
-    `/einnahmen/export?standort=${encodeURIComponent(location)}` +
+    `/auswertungen/export?auswahl=${encodeURIComponent(location)}` +
     (year ? `&jahr=${year}` : "");
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t.income.title}</h1>
-        <p className="mt-1 max-w-3xl text-sm text-muted">{t.income.intro}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.reports.title}</h1>
+        <p className="mt-1 max-w-3xl text-sm text-muted">{t.reports.intro}</p>
       </div>
 
       {/* Standortwahl */}
@@ -93,7 +89,7 @@ export default async function IncomePage({
         {choices.map((value) => (
           <Link
             key={value}
-            href={`/einnahmen?standort=${encodeURIComponent(value)}`}
+            href={`/auswertungen?standort=${encodeURIComponent(value)}`}
             className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
               value === location
                 ? "bg-accent text-accent-fg"
@@ -107,17 +103,20 @@ export default async function IncomePage({
 
       {years.length === 0 ? (
         <Card>
-          <EmptyState title={t.income.emptyTitle} description={t.income.emptyHint} />
+          <EmptyState title={t.reports.emptyTitle} description={t.reports.emptyHint} />
         </Card>
       ) : (
         <>
           <Card>
             <CardHeader
               title={label(location)}
-              description={plural(t.income.countProperties, rows.length)}
+              description={
+                (location === TA24 ? `${t.reports.ta24Hint} · ` : "") +
+                plural(t.reports.countProperties, rows.length)
+              }
               action={
                 <ButtonLink href={exportHref()} variant="secondary" prefetch={false}>
-                  {t.income.exportAll}
+                  {t.reports.exportAll}
                 </ButtonLink>
               }
             />
@@ -136,17 +135,17 @@ export default async function IncomePage({
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
               <h2 className="text-base font-semibold">
-                {fill(t.income.breakdown, { year: selected })}
+                {fill(t.reports.breakdown, { year: selected })}
                 <span className="ml-2 text-sm font-normal text-muted">
-                  {plural(t.income.countProperties, yearRows.length)} ·{" "}
-                  {plural(t.income.countPayments, yearTotal.count)}
+                  {plural(t.reports.countProperties, yearRows.length)} ·{" "}
+                  {plural(t.reports.countPayments, yearTotal.count)}
                 </span>
               </h2>
               <div className="flex flex-wrap items-center gap-1">
                 {years.map((year) => (
                   <Link
                     key={year}
-                    href={`/einnahmen?standort=${encodeURIComponent(location)}&jahr=${year}`}
+                    href={`/auswertungen?standort=${encodeURIComponent(location)}&jahr=${year}`}
                     className={`rounded-md px-2.5 py-1 text-sm transition-colors ${
                       year === selected
                         ? "bg-accent text-accent-fg"
@@ -162,7 +161,7 @@ export default async function IncomePage({
                   prefetch={false}
                   className="ml-2"
                 >
-                  {fill(t.income.exportYear, { year: selected })}
+                  {fill(t.reports.exportYear, { year: selected })}
                 </ButtonLink>
               </div>
             </div>
@@ -196,8 +195,8 @@ function YearTable({
   t: Dict;
   f: ReturnType<typeof formatters>;
   years: number[];
-  totals: Map<number, Ta24Cell>;
-  grand: Ta24Cell;
+  totals: Map<number, YearCell>;
+  grand: YearCell;
   selected: number;
   location: string;
   showReductions: boolean;
@@ -207,13 +206,13 @@ function YearTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-5 py-3 font-medium">{t.income.year}</th>
-            <th className="px-5 py-3 text-right font-medium">{t.income.payments}</th>
-            <th className="px-5 py-3 text-right font-medium">{t.income.received}</th>
+            <th className="px-5 py-3 font-medium">{t.reports.year}</th>
+            <th className="px-5 py-3 text-right font-medium">{t.reports.payments}</th>
+            <th className="px-5 py-3 text-right font-medium">{t.reports.received}</th>
             {showReductions && (
               <>
-                <th className="px-5 py-3 text-right font-medium">{t.income.reductions}</th>
-                <th className="px-5 py-3 text-right font-medium">{t.income.taxable}</th>
+                <th className="px-5 py-3 text-right font-medium">{t.reports.reductions}</th>
+                <th className="px-5 py-3 text-right font-medium">{t.reports.taxable}</th>
               </>
             )}
           </tr>
@@ -232,7 +231,7 @@ function YearTable({
               >
                 <td className="px-5 py-3">
                   <Link
-                    href={`/einnahmen?standort=${encodeURIComponent(location)}&jahr=${year}`}
+                    href={`/auswertungen?standort=${encodeURIComponent(location)}&jahr=${year}`}
                     className={`font-medium hover:underline ${active ? "text-accent" : ""}`}
                   >
                     {year}
@@ -256,7 +255,7 @@ function YearTable({
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-border bg-surface-muted/50 font-medium">
-            <td className="px-5 py-3">{t.income.total}</td>
+            <td className="px-5 py-3">{t.reports.total}</td>
             <td className="tabular px-5 py-3 text-right text-muted">{grand.count}</td>
             <td className="tabular px-5 py-3 text-right">{f.euro(grand.sum)}</td>
             {showReductions && (
@@ -287,7 +286,7 @@ function PropertyTable({
   f: ReturnType<typeof formatters>;
   rows: IncomeRow[];
   selected: number;
-  total: Ta24Cell;
+  total: YearCell;
   showReductions: boolean;
   showLocation: boolean;
 }) {
@@ -297,17 +296,17 @@ function PropertyTable({
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
             <th className="w-[32%] min-w-[220px] px-5 py-3 font-medium">
-              {t.income.property}
+              {t.reports.property}
             </th>
             {showLocation && <th className="px-5 py-3 font-medium">{t.form.location}</th>}
-            <th className="px-5 py-3 text-right font-medium">{t.income.payments}</th>
+            <th className="px-5 py-3 text-right font-medium">{t.reports.payments}</th>
             <th className="px-5 py-3 text-right font-medium">
-              {fill(t.income.receivedIn, { year: selected })}
+              {fill(t.reports.receivedIn, { year: selected })}
             </th>
             {showReductions && (
               <>
-                <th className="px-5 py-3 text-right font-medium">{t.income.reductions}</th>
-                <th className="px-5 py-3 text-right font-medium">{t.income.taxable}</th>
+                <th className="px-5 py-3 text-right font-medium">{t.reports.reductions}</th>
+                <th className="px-5 py-3 text-right font-medium">{t.reports.taxable}</th>
               </>
             )}
           </tr>
@@ -330,7 +329,7 @@ function PropertyTable({
                   )}
                   {row.archived && (
                     <span className="mt-0.5 inline-block">
-                      <Badge>{t.income.archived}</Badge>
+                      <Badge>{t.reports.archived}</Badge>
                     </span>
                   )}
                 </td>
@@ -356,7 +355,7 @@ function PropertyTable({
         <tfoot>
           <tr className="border-t-2 border-border bg-surface-muted/50 font-medium">
             <td className="px-5 py-3" colSpan={showLocation ? 2 : 1}>
-              {fill(t.income.sumOf, { year: selected })}
+              {fill(t.reports.sumOf, { year: selected })}
             </td>
             <td className="tabular px-5 py-3 text-right text-muted">{total.count}</td>
             <td className="tabular px-5 py-3 text-right">{f.euro(total.sum)}</td>

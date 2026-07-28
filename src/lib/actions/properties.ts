@@ -30,7 +30,7 @@ function number(formData: FormData, key: string): number {
 
 type PropertyInput = {
   name: string;
-  location_id: string | null;
+  location_id: string;
   tenant_name: string;
   start_date: string;
   term_months: number;
@@ -55,6 +55,10 @@ function readProperty(formData: FormData, m: Messages): PropertyInput | string {
   }
   if (!FREQUENCIES.includes(frequency)) return m.badFrequency;
 
+  // Pflicht, weil Dashboard und Auswertungen nach Standort gruppieren.
+  const location_id = text(formData, "location_id");
+  if (!location_id) return m.needLocation;
+
   // Kaution ist freiwillig; ein leeres Feld ergibt NaN und bedeutet "keine".
   const deposit = number(formData, "deposit_amount");
   if (text(formData, "deposit_amount") && (!Number.isFinite(deposit) || deposit < 0)) {
@@ -63,7 +67,7 @@ function readProperty(formData: FormData, m: Messages): PropertyInput | string {
 
   return {
     name,
-    location_id: text(formData, "location_id") || null,
+    location_id,
     tenant_name: text(formData, "tenant_name"),
     start_date,
     term_months,

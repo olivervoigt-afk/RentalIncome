@@ -4,6 +4,16 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/login", "/auth"];
 
 /**
+ * Seiten, die es nicht mehr gibt. Lesezeichen und offene Tabs sollen
+ * dorthin führen, wo der Inhalt jetzt steht, statt auf eine Fehlerseite.
+ */
+const MOVED: Record<string, string> = {
+  "/ta24": "/auswertungen?standort=ta24",
+  "/einnahmen": "/auswertungen",
+  "/benutzer": "/einstellungen?tab=benutzer",
+};
+
+/**
  * Erneuert bei jeder Anfrage die Supabase-Session und schützt alle Seiten
  * ausser dem Login. (Ab Next.js 16 heisst Middleware "Proxy".)
  */
@@ -37,6 +47,9 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+
+  const moved = MOVED[pathname];
+  if (moved) return NextResponse.redirect(new URL(moved, request.url));
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

@@ -15,10 +15,13 @@ export default function TabNav({
   items,
   active,
   basePath,
+  defaultKey = "uebersicht",
 }: {
   items: TabItem[];
   active: string;
   basePath: string;
+  /** Dieser Reiter liegt auf dem Grundpfad und braucht keinen Parameter. */
+  defaultKey?: string;
 }) {
   return (
     <div className="border-b border-border">
@@ -29,7 +32,7 @@ export default function TabNav({
           return (
             <Link
               key={item.key}
-              href={item.key === "uebersicht" ? basePath : `${basePath}?tab=${item.key}`}
+              href={item.key === defaultKey ? basePath : `${basePath}?tab=${item.key}`}
               aria-current={isActive ? "page" : undefined}
               className={`whitespace-nowrap border-b-2 px-4 py-2.5 text-sm transition-colors ${
                 isActive

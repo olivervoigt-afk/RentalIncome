@@ -51,8 +51,7 @@ const de = {
 
   nav: {
     dashboard: "Dashboard",
-    ta24: "TA24",
-    income: "Jahreseinnahmen",
+    reports: "Auswertungen",
     notes: "Notizen",
     users: "Benutzer",
     settings: "Einstellungen",
@@ -136,6 +135,18 @@ const de = {
     showArchive: "Archiv einblenden",
     hideArchive: "Archiv ausblenden",
     hiddenToggle: "{n} Objekt ausgeblendet — einblenden|{n} Objekte ausgeblendet — einblenden",
+    arrears: "Rückstände",
+    arrearsNone: "Alle ausgeglichen",
+    incomeYear: "Einnahmen {year}",
+    incomeYearHint: "Zur vollen Auswertung",
+    depositsHeld: "Kaution gehalten",
+    depositsHint: "Nicht im Saldo enthalten",
+    endingSoon: "Verträge enden bald",
+    endingSoonHint: "in den nächsten 90 Tagen",
+    endingSoonNone: "keine in 90 Tagen",
+    filtered: "Gefiltert: {label}",
+    showAll: "Filter aufheben",
+    endsIn: "in {n} Mon.",
     noLocation: "Ohne Standort",
   },
 
@@ -248,7 +259,7 @@ const de = {
     name: "Objektname",
     location: "Standort",
     locationHint: "Weitere Standorte legst du in den Einstellungen an.",
-    noLocation: "Ohne Standort",
+    chooseLocation: "Bitte wählen",
     tenant: "Mieter",
     frequency: "Zahlungsrhythmus",
     start: "Mietbeginn",
@@ -265,39 +276,15 @@ const de = {
     backToProperty: "← Zurück zum Objekt",
   },
 
-  ta24: {
-    title: "TA24-Auswertung",
-    intro:
-      "Grundlage sind die tatsächlich eingegangenen Zahlungen nach ihrem Zahlungsdatum, nicht die Fälligkeit. Eine Dezembermiete, die im Januar eingeht, zählt daher zum Januar-Jahr. Berücksichtigt sind alle Objekte mit TA24-Kennzeichen, auch archivierte. Gutschriften bleiben aussen vor, da ihnen kein Geldeingang gegenübersteht.",
-    allYears: "Alle Jahre",
-    allYearsHint: "Tatsächlich eingegangene Mieten auf Objekten mit TA24-Kennzeichen.",
-    exportAll: "Alle Jahre als CSV",
-    exportYear: "{year} als CSV",
-    year: "Jahr",
-    payments: "Zahlungen",
-    received: "Erhalten",
-    receivedIn: "Erhalten {year}",
-    reductions: "Minderungen",
-    taxable: "Steuerpflichtig",
-    breakdown: "Aufschlüsselung {year}",
-    total: "Gesamt",
-    sumOf: "Summe {year}",
-    property: "Objekt",
-    location: "Standort",
-    archived: "Archiviert",
-    emptyTitle: "Keine Zahlungen auf TA24-Objekten",
-    emptyHint:
-      "Sobald für ein Objekt mit TA24-Kennzeichen Zahlungen erfasst sind, erscheinen sie hier.",
-    countProperties: "{n} Objekt|{n} Objekte",
-    countPayments: "{n} Zahlung|{n} Zahlungen",
-  },
 
-  income: {
-    title: "Jahreseinnahmen nach Standort",
+  reports: {
+    title: "Auswertungen",
     intro:
-      "Gezählt wird, was im jeweiligen Kalenderjahr tatsächlich geflossen ist — maßgeblich ist das Zahlungsdatum, nicht die Fälligkeit. Als steuermindernd gekennzeichnete Gutschriften werden abgezogen. Archivierte Objekte sind enthalten, da ihre Zahlungen zu vergangenen Jahren gehören.",
-    allLocations: "Alle Standorte",
+      "Gezählt wird, was im jeweiligen Kalenderjahr tatsächlich geflossen ist — maßgeblich ist das Zahlungsdatum, nicht die Fälligkeit. Eine Dezembermiete, die im Januar eingeht, zählt daher ins Januar-Jahr. Als steuermindernd gekennzeichnete Gutschriften werden abgezogen. Archivierte Objekte sind enthalten, da ihre Zahlungen zu vergangenen Jahren gehören.",
+    all: "Alle",
     noLocation: "Ohne Standort",
+    ta24: "TA24",
+    ta24Hint: "Nur Objekte mit TA24-Kennzeichen — die Grundlage der maltesischen Erklärung.",
     exportAll: "Alle Jahre als CSV",
     exportYear: "{year} als CSV",
     year: "Jahr",
@@ -312,11 +299,12 @@ const de = {
     sumOf: "Summe {year}",
     breakdown: "Aufschlüsselung {year}",
     archived: "Archiviert",
-    emptyTitle: "Keine Zahlungen für diesen Standort",
+    emptyTitle: "Keine Zahlungen in dieser Auswahl",
     emptyHint: "Sobald Zahlungen erfasst sind, erscheinen sie hier.",
     countProperties: "{n} Objekt|{n} Objekte",
     countPayments: "{n} Zahlung|{n} Zahlungen",
   },
+
 
   users: {
     title: "Benutzer",
@@ -344,6 +332,11 @@ const de = {
 
   settings: {
     title: "Einstellungen",
+    tabs: {
+      account: "Konto",
+      admin: "Verwaltung",
+      users: "Benutzer",
+    },
     account: "Mein Konto",
     name: "Name",
     email: "E-Mail",
@@ -390,6 +383,7 @@ const de = {
     nothingSaved:
       "Es wurde nichts gespeichert — das Objekt existiert nicht mehr oder die Seite ist veraltet. Bitte die Seite neu laden.",
     needName: "Bitte einen Objektnamen angeben.",
+    needLocation: "Bitte einen Standort wählen.",
     needStart: "Bitte den Mietbeginn angeben.",
     needTerm: "Die Laufzeit muss eine ganze Zahl von mindestens 1 Monat sein.",
     badFrequency: "Ungültiger Zahlungsrhythmus.",
@@ -497,8 +491,7 @@ const en: Dict = {
 
   nav: {
     dashboard: "Dashboard",
-    ta24: "TA24",
-    income: "Annual income",
+    reports: "Reports",
     notes: "Notes",
     users: "Users",
     settings: "Settings",
@@ -581,6 +574,18 @@ const en: Dict = {
     showArchive: "Show archive",
     hideArchive: "Hide archive",
     hiddenToggle: "{n} property hidden — show|{n} properties hidden — show",
+    arrears: "Arrears",
+    arrearsNone: "All settled",
+    incomeYear: "Income {year}",
+    incomeYearHint: "To the full report",
+    depositsHeld: "Deposits held",
+    depositsHint: "Not included in the balance",
+    endingSoon: "Contracts ending soon",
+    endingSoonHint: "within the next 90 days",
+    endingSoonNone: "none within 90 days",
+    filtered: "Filtered: {label}",
+    showAll: "Clear filter",
+    endsIn: "in {n} mo.",
     noLocation: "No location",
   },
 
@@ -693,7 +698,7 @@ const en: Dict = {
     name: "Property name",
     location: "Location",
     locationHint: "Add further locations under Settings.",
-    noLocation: "No location",
+    chooseLocation: "Please choose",
     tenant: "Tenant",
     frequency: "Payment frequency",
     start: "Start of tenancy",
@@ -709,39 +714,15 @@ const en: Dict = {
     backToProperty: "← Back to property",
   },
 
-  ta24: {
-    title: "TA24 report",
-    intro:
-      "Based on payments actually received, by their payment date rather than their due date. A December rent arriving in January therefore counts towards January's year. All properties flagged TA24 are included, archived ones too. Credits are excluded, as no money changed hands.",
-    allYears: "All years",
-    allYearsHint: "Rent actually received on properties flagged TA24.",
-    exportAll: "All years as CSV",
-    exportYear: "{year} as CSV",
-    year: "Year",
-    payments: "Payments",
-    received: "Received",
-    receivedIn: "Received {year}",
-    reductions: "Reductions",
-    taxable: "Taxable",
-    breakdown: "Breakdown {year}",
-    total: "Total",
-    sumOf: "Total {year}",
-    property: "Property",
-    location: "Location",
-    archived: "Archived",
-    emptyTitle: "No payments on TA24 properties",
-    emptyHint:
-      "Once payments are recorded for a property flagged TA24, they appear here.",
-    countProperties: "{n} property|{n} properties",
-    countPayments: "{n} payment|{n} payments",
-  },
 
-  income: {
-    title: "Annual income by location",
+  reports: {
+    title: "Reports",
     intro:
-      "Counts what actually came in during each calendar year — the payment date matters, not the due date. Credits flagged as reducing taxable income are deducted. Archived properties are included, as their payments belong to past years.",
-    allLocations: "All locations",
+      "What counts is what actually came in during the calendar year — the payment date matters, not the due date. A December rent received in January therefore counts towards the January year. Credits marked as tax-reducing are deducted. Archived properties are included, since their payments belong to past years.",
+    all: "All",
     noLocation: "No location",
+    ta24: "TA24",
+    ta24Hint: "Only properties flagged TA24 — the basis of the Maltese return.",
     exportAll: "All years as CSV",
     exportYear: "{year} as CSV",
     year: "Year",
@@ -756,11 +737,12 @@ const en: Dict = {
     sumOf: "Total {year}",
     breakdown: "Breakdown {year}",
     archived: "Archived",
-    emptyTitle: "No payments for this location",
-    emptyHint: "Once payments are recorded, they appear here.",
+    emptyTitle: "No payments in this selection",
+    emptyHint: "Payments will appear here once recorded.",
     countProperties: "{n} property|{n} properties",
     countPayments: "{n} payment|{n} payments",
   },
+
 
   users: {
     title: "Users",
@@ -788,6 +770,11 @@ const en: Dict = {
 
   settings: {
     title: "Settings",
+    tabs: {
+      account: "Account",
+      admin: "Administration",
+      users: "Users",
+    },
     account: "My account",
     name: "Name",
     email: "Email",
@@ -834,6 +821,7 @@ const en: Dict = {
     nothingSaved:
       "Nothing was saved — the property no longer exists or this page is out of date. Please reload.",
     needName: "Please enter a property name.",
+    needLocation: "Please choose a location.",
     needStart: "Please enter the start of the tenancy.",
     needTerm: "The term must be a whole number of at least 1 month.",
     badFrequency: "Invalid payment frequency.",

@@ -1,12 +1,12 @@
 import { getProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { fill } from "@/lib/i18n/dictionaries";
-import { getAnnualIncome, type Ta24Cell } from "@/lib/queries";
+import { getAnnualIncome, type YearCell } from "@/lib/queries";
 
-const WITHOUT = "ohne";
 const ALL = "alle";
+const TA24 = "ta24";
 
-const emptyCell = (): Ta24Cell => ({ count: 0, sum: 0, reductions: 0, taxable: 0 });
+const emptyCell = (): YearCell => ({ count: 0, sum: 0, reductions: 0, taxable: 0 });
 
 /** Excel erwartet im deutschen Sprachraum das Komma als Dezimalzeichen. */
 function money(value: number, locale: string): string {
@@ -32,16 +32,16 @@ export async function GET(request: Request) {
   const [report, { t, locale }] = await Promise.all([getAnnualIncome(), getDict()]);
   const amount = (value: number) => money(value, locale);
 
-  const requestedLocation = params.get("standort") ?? ALL;
-  const choices = [...report.locations, WITHOUT, ALL];
-  const location = choices.includes(requestedLocation) ? requestedLocation : ALL;
+  const requested = params.get("auswahl") ?? ALL;
+  const choices = [ALL, ...report.locations, TA24];
+  const selection = choices.includes(requested) ? requested : ALL;
 
   const rows = report.rows.filter((row) =>
-    location === ALL
+    selection === ALL
       ? true
-      : location === WITHOUT
-        ? row.location === null
-        : row.location === location,
+      : selection === TA24
+        ? row.ta24
+        : row.location === selection,
   );
 
   const years = report.years.filter((year) =>
@@ -53,15 +53,15 @@ export async function GET(request: Request) {
   const wanted = single ? [single] : years;
 
   const label =
-    location === ALL
-      ? t.income.allLocations
-      : location === WITHOUT
-        ? t.income.noLocation
-        : location;
+    selection === ALL
+      ? t.reports.all
+      : selection === TA24
+        ? t.reports.ta24
+        : selection;
 
   const lines: string[] = [];
-  lines.push(csvRow([`${t.income.title} — ${label}`]));
-  lines.push(csvRow([t.income.intro]));
+  lines.push(csvRow([`${t.reports.title} — ${label}`]));
+  lines.push(csvRow([t.reports.intro]));
   lines.push(csvRow([new Date().toLocaleDateString(locale === "de" ? "de-DE" : "en-GB")]));
   lines.push("");
 
@@ -72,17 +72,17 @@ export async function GET(request: Request) {
 
     const total = emptyCell();
 
-    lines.push(csvRow([`${t.income.year} ${year}`]));
+    lines.push(csvRow([`${t.reports.year} ${year}`]));
     lines.push(
       csvRow([
-        t.income.property,
-        t.income.tenant,
+        t.reports.property,
+        t.reports.tenant,
         t.form.location,
         "Status",
-        t.income.payments,
-        `${t.income.received} (EUR)`,
-        `${t.income.reductions} (EUR)`,
-        `${t.income.taxable} (EUR)`,
+        t.reports.payments,
+        `${t.reports.received} (EUR)`,
+        `${t.reports.reductions} (EUR)`,
+        `${t.reports.taxable} (EUR)`,
       ]),
     );
 
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
           row.name,
           row.tenant,
           row.location ?? "",
-          row.archived ? t.income.archived : "",
+          row.archived ? t.reports.archived : "",
           cell.count,
           amount(cell.sum),
           amount(cell.reductions),
@@ -109,7 +109,7 @@ export async function GET(request: Request) {
 
     lines.push(
       csvRow([
-        fill(t.income.sumOf, { year }),
+        fill(t.reports.sumOf, { year }),
         "",
         "",
         "",
@@ -125,14 +125,14 @@ export async function GET(request: Request) {
   if (!single) {
     const grand = emptyCell();
 
-    lines.push(csvRow([t.income.total]));
+    lines.push(csvRow([t.reports.total]));
     lines.push(
       csvRow([
-        t.income.year,
-        t.income.payments,
-        `${t.income.received} (EUR)`,
-        `${t.income.reductions} (EUR)`,
-        `${t.income.taxable} (EUR)`,
+        t.reports.year,
+        t.reports.payments,
+        `${t.reports.received} (EUR)`,
+        `${t.reports.reductions} (EUR)`,
+        `${t.reports.taxable} (EUR)`,
       ]),
     );
 
@@ -164,7 +164,7 @@ export async function GET(request: Request) {
 
     lines.push(
       csvRow([
-        t.income.total,
+        t.reports.total,
         grand.count,
         amount(grand.sum),
         amount(grand.reductions),
@@ -175,8 +175,8 @@ export async function GET(request: Request) {
 
   const slug = label.replace(/[^\w]+/g, "-");
   const name = single
-    ? `Einnahmen-${slug}-${single}.csv`
-    : `Einnahmen-${slug}.csv`;
+    ? `Auswertung-${slug}-${single}.csv`
+    : `Auswertung-${slug}.csv`;
 
   // Byte Order Mark, damit Excel die Umlaute richtig erkennt.
   return new Response("﻿" + lines.join("\r\n"), {

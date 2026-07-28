@@ -1,34 +1,28 @@
-import { redirect } from "next/navigation";
 import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
-import RoleSelect from "@/components/role-select";
 import ResetPasswordForm from "@/components/reset-password-form";
+import RoleSelect from "@/components/role-select";
 import { Badge, Card, CardHeader, Field, Input, Select } from "@/components/ui";
 import { createUser, deleteUser } from "@/lib/actions/users";
-import { requireProfile } from "@/lib/auth";
-import { getDict } from "@/lib/i18n";
-import { getProfiles } from "@/lib/queries";
-import { fill } from "@/lib/i18n/dictionaries";
+import { fill, type Dict } from "@/lib/i18n/dictionaries";
+import type { Profile } from "@/lib/types";
 
-export const metadata = { title: "Benutzer" };
-
-export default async function UsersPage() {
-  const me = await requireProfile();
-  if (me.role !== "admin") redirect("/");
-
-  const [profiles, { t }] = await Promise.all([getProfiles(), getDict()]);
-
+export default function UsersPanel({
+  t,
+  me,
+  profiles,
+}: {
+  t: Dict;
+  me: Profile;
+  profiles: Profile[];
+}) {
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t.users.title}</h1>
-        <p className="mt-1 text-sm text-muted">
-          {t.users.intro}
-        </p>
-      </div>
-
+    <div className="space-y-6">
       <Card>
-        <CardHeader title={t.users.accounts} description={fill(t.users.count, { n: profiles.length })} />
+        <CardHeader
+          title={t.users.accounts}
+          description={fill(t.users.count, { n: profiles.length })}
+        />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -69,7 +63,9 @@ export default async function UsersPage() {
                         fields={{ id: profile.id }}
                         trigger={t.common.delete}
                         title={t.users.deleteTitle}
-                        description={fill(t.users.deleteDetail, { name: profile.full_name || profile.email })}
+                        description={fill(t.users.deleteDetail, {
+                          name: profile.full_name || profile.email,
+                        })}
                       />
                     )}
                   </td>
@@ -81,10 +77,7 @@ export default async function UsersPage() {
       </Card>
 
       <Card>
-        <CardHeader
-          title={t.users.createTitle}
-          description={t.users.createHint}
-        />
+        <CardHeader title={t.users.createTitle} description={t.users.createHint} />
         <div className="p-5">
           <InlineForm action={createUser} submitLabel={t.users.create}>
             <div className="grid gap-4 sm:grid-cols-2">
