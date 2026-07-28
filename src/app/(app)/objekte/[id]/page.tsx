@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import DangerAction from "@/components/danger-action";
 import DocumentsPanel from "@/components/documents-panel";
 import CreditsTab from "@/components/property/credits-tab";
+import NotesTab from "@/components/property/notes-tab";
 import OverviewTab from "@/components/property/overview-tab";
 import PaymentsTab, { type PaymentsView } from "@/components/property/payments-tab";
 import TabNav from "@/components/tab-nav";
@@ -11,10 +12,22 @@ import { deleteProperty, setArchived } from "@/lib/actions/properties";
 import { getProfile } from "@/lib/auth";
 import { formatters } from "@/lib/format";
 import { getDict } from "@/lib/i18n";
-import { getPaymentSources, getPropertyDetail } from "@/lib/queries";
+import {
+  getPaymentSources,
+  getProfiles,
+  getPropertyDetail,
+  getPropertyNotes,
+} from "@/lib/queries";
 import { fill } from "@/lib/i18n/dictionaries";
 
-const TABS = ["uebersicht", "zahlungen", "gutschriften", "dokumente", "historie"] as const;
+const TABS = [
+  "uebersicht",
+  "zahlungen",
+  "gutschriften",
+  "dokumente",
+  "notizen",
+  "historie",
+] as const;
 type Tab = (typeof TABS)[number];
 
 export default async function PropertyDetailPage({
@@ -32,10 +45,12 @@ export default async function PropertyDetailPage({
   const { id } = await params;
   const query = await searchParams;
 
-  const [profile, detail, sources, { t, locale }] = await Promise.all([
+  const [profile, detail, sources, notes, people, { t, locale }] = await Promise.all([
     getProfile(),
     getPropertyDetail(id),
     getPaymentSources(),
+    getPropertyNotes(id),
+    getProfiles(),
     getDict(),
   ]);
   const f = formatters(locale);
@@ -114,6 +129,7 @@ export default async function PropertyDetailPage({
           { key: "zahlungen", label: t.property.tabs.payments, count: payments.length },
           { key: "gutschriften", label: t.property.tabs.credits, count: credits.length },
           { key: "dokumente", label: t.property.tabs.documents, count: documents.length },
+          { key: "notizen", label: t.property.tabs.notes, count: notes.length },
           ...(history.length > 0
             ? [{ key: "historie", label: t.property.tabs.history, count: history.length }]
             : []),
@@ -157,6 +173,17 @@ export default async function PropertyDetailPage({
           propertyId={property.id}
           documents={documents}
           canEdit={canEdit}
+        />
+      )}
+
+      {tab === "notizen" && profile && (
+        <NotesTab
+          t={t}
+          f={f}
+          propertyId={property.id}
+          notes={notes}
+          people={people}
+          viewerId={profile.id}
         />
       )}
 

@@ -1,3 +1,4 @@
+import { getProfile } from "./auth";
 import { createClient } from "./supabase/server";
 import { summarize, type PropertySummary } from "./rent";
 import type {
@@ -9,6 +10,7 @@ import type {
   Profile,
   Property,
   PropertyDocument,
+  PropertyNote,
   RentPeriod,
 } from "./types";
 
@@ -435,4 +437,96 @@ export async function getAnnualIncome(): Promise<IncomeReport> {
     rows,
     hasReductions,
   };
+}
+
+
+export type NoteWithNames = PropertyNote & {
+  authorName: string;
+  recipientName: string | null;
+};
+
+/** Notizen eines Objekts. Die Sichtbarkeit regelt die Datenbank. */
+export async function getPropertyNotes(propertyId: string): Promise<NoteWithNames[]> {
+  const supabase = await createClient();
+
+  const [notes, profiles] = await Promise.all([
+    supabase
+      .from("property_notes")
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("created_at"),
+    supabase.from("profiles").select("id, full_name, email"),
+  ]);
+
+  const nameOf = new Map(
+    ((profiles.data ?? []) as Profile[]).map((p) => [p.id, p.full_name || p.email]),
+  );
+
+  return ((notes.data ?? []) as PropertyNote[]).map((note) => ({
+    ...note,
+    authorName: nameOf.get(note.author_id) ?? "—",
+    recipientName: note.recipient_id ? (nameOf.get(note.recipient_id) ?? "—") : null,
+  }));
+}
+
+export type InboxNote = NoteWithNames & { propertyName: string };
+
+export type Inbox = {
+  unread: InboxNote[];
+  recent: InboxNote[];
+};
+
+/**
+ * Notizen über alle Objekte hinweg — ungelesene zuerst.
+ * Was der Benutzer nicht sehen darf, filtert bereits die Datenbank heraus.
+ */
+export async function getInbox(): Promise<Inbox> {
+  const supabase = await createClient();
+  const profile = await getProfile();
+
+  const [notes, profiles, properties] = await Promise.all([
+    supabase
+      .from("property_notes")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase.from("profiles").select("id, full_name, email"),
+    supabase.from("properties").select("id, name"),
+  ]);
+
+  const nameOf = new Map(
+    ((profiles.data ?? []) as Profile[]).map((p) => [p.id, p.full_name || p.email]),
+  );
+  const propertyName = new Map(
+    ((properties.data ?? []) as Pick<Property, "id" | "name">[]).map((p) => [p.id, p.name]),
+  );
+
+  const all: InboxNote[] = ((notes.data ?? []) as PropertyNote[]).map((note) => ({
+    ...note,
+    authorName: nameOf.get(note.author_id) ?? "—",
+    recipientName: note.recipient_id ? (nameOf.get(note.recipient_id) ?? "—") : null,
+    propertyName: propertyName.get(note.property_id) ?? "—",
+  }));
+
+  const isMine = (n: InboxNote) => n.recipient_id === profile?.id && n.read_at === null;
+
+  return {
+    unread: all.filter(isMine),
+    recent: all.filter((n) => !isMine(n)).slice(0, 30),
+  };
+}
+
+/** Anzahl ungelesener Notizen für die Menüzeile. */
+export async function getUnreadNoteCount(): Promise<number> {
+  const profile = await getProfile();
+  if (!profile) return 0;
+
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("property_notes")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", profile.id)
+    .is("read_at", null);
+
+  return count ?? 0;
 }

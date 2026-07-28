@@ -117,5 +117,18 @@ export type PropertyDocument = {
   uploaded_by: string | null;
 };
 
+export type PropertyNote = {
+  id: string;
+  property_id: string;
+  author_id: string;
+  /** null = Aktennotiz für alle; sonst nur für Absender und Empfänger sichtbar. */
+  recipient_id: string | null;
+  /** Verweis auf die Notiz, auf die geantwortet wird. */
+  parent_id: string | null;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+};
+
 /** Sprache des Benutzers; die Beschriftungen liegen in den Wörterbüchern. */
 export type UserLocale = "de" | "en";

@@ -54,10 +54,13 @@ export default function Nav({
   profile,
   t,
   locale,
+  unreadNotes,
 }: {
   profile: Profile;
   t: Dict;
   locale: Locale;
+  /** Anzahl ungelesener Notizen; als kleine Zahl neben dem Eintrag. */
+  unreadNotes: number;
 }) {
   const pathname = usePathname();
 
@@ -66,6 +69,7 @@ export default function Nav({
   const links = [
     { href: "/ta24", label: t.nav.ta24 },
     { href: "/einnahmen", label: t.nav.income },
+    { href: "/notizen", label: t.nav.notes, badge: unreadNotes },
     { href: "/benutzer", label: t.nav.users, adminOnly: true },
   ].filter((link) => !link.adminOnly || profile.role === "admin");
 
@@ -104,6 +108,11 @@ export default function Nav({
                 }`}
               >
                 {link.label}
+                {link.badge ? (
+                  <span className="ml-1.5 rounded-full bg-accent px-1.5 py-px text-[11px] font-medium text-white">
+                    {link.badge}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
