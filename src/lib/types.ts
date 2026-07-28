@@ -56,10 +56,37 @@ export type Property = {
   term_months: number;
   payment_frequency: PaymentFrequency;
   ta24: boolean;
+  /** Vertraglich vereinbarte Kaution; 0 bedeutet "keine vereinbart". */
+  deposit_amount: number;
   notes: string;
   archived: boolean;
   created_at: string;
   updated_at: string;
+};
+
+/**
+ * Bewegung auf der Kaution. Bewusst getrennt von den Mietzahlungen —
+ * eine verwahrte Kaution ist weder Einnahme noch Teil des Saldos.
+ */
+export type DepositKind = "received" | "refunded" | "retained";
+
+export type Deposit = {
+  id: string;
+  property_id: string;
+  kind: DepositKind;
+  happened_on: string;
+  /** Immer positiv; die Richtung steckt in kind. */
+  amount: number;
+  source_id: string | null;
+  note: string;
+  /**
+   * Nur bei kind = "retained": Verweis auf die Zahlung, die aus dem
+   * Einbehalt entstanden ist. Ist sie gesetzt, zählt bereits die Zahlung
+   * in Saldo und Steuerauswertung.
+   */
+  payment_id: string | null;
+  created_at: string;
+  created_by: string | null;
 };
 
 export type RentPeriod = {

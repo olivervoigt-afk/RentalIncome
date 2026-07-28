@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import DangerAction from "@/components/danger-action";
 import DocumentsPanel from "@/components/documents-panel";
 import CreditsTab from "@/components/property/credits-tab";
+import DepositsTab from "@/components/property/deposits-tab";
 import NotesTab from "@/components/property/notes-tab";
 import OverviewTab from "@/components/property/overview-tab";
 import PaymentsTab, { type PaymentsView } from "@/components/property/payments-tab";
@@ -24,6 +25,7 @@ const TABS = [
   "uebersicht",
   "zahlungen",
   "gutschriften",
+  "kaution",
   "dokumente",
   "notizen",
   "historie",
@@ -57,8 +59,18 @@ export default async function PropertyDetailPage({
 
   if (!detail) notFound();
 
-  const { property, location, periods, payments, credits, documents, history, summary } =
-    detail;
+  const {
+    property,
+    location,
+    periods,
+    payments,
+    credits,
+    deposits,
+    depositSummary,
+    documents,
+    history,
+    summary,
+  } = detail;
   const canEdit = profile?.role !== "viewer";
 
   const tab: Tab = TABS.includes(query.tab as Tab) ? (query.tab as Tab) : "uebersicht";
@@ -121,6 +133,16 @@ export default async function PropertyDetailPage({
         />
       </div>
 
+      {(depositSummary.held > 0 || Number(property.deposit_amount) > 0) && (
+        <p className="text-sm text-muted">
+          {t.deposits.held}:{" "}
+          <span className="tabular font-medium text-foreground">
+            {f.euro(depositSummary.held)}
+          </span>{" "}
+          — {t.deposits.hint}
+        </p>
+      )}
+
       <TabNav
         active={tab}
         basePath={`/objekte/${property.id}`}
@@ -128,6 +150,7 @@ export default async function PropertyDetailPage({
           { key: "uebersicht", label: t.property.tabs.overview },
           { key: "zahlungen", label: t.property.tabs.payments, count: payments.length },
           { key: "gutschriften", label: t.property.tabs.credits, count: credits.length },
+          { key: "kaution", label: t.deposits.tab, count: deposits.length },
           { key: "dokumente", label: t.property.tabs.documents, count: documents.length },
           { key: "notizen", label: t.property.tabs.notes, count: notes.length },
           ...(history.length > 0
@@ -164,6 +187,18 @@ export default async function PropertyDetailPage({
 
       {tab === "gutschriften" && (
         <CreditsTab t={t} f={f} propertyId={property.id} credits={credits} canEdit={canEdit} />
+      )}
+
+      {tab === "kaution" && (
+        <DepositsTab
+          t={t}
+          f={f}
+          property={property}
+          deposits={deposits}
+          summary={depositSummary}
+          sources={sources}
+          canEdit={canEdit}
+        />
       )}
 
       {tab === "dokumente" && (

@@ -36,6 +36,7 @@ type PropertyInput = {
   term_months: number;
   payment_frequency: PaymentFrequency;
   ta24: boolean;
+  deposit_amount: number;
   notes: string;
 };
 
@@ -54,6 +55,12 @@ function readProperty(formData: FormData, m: Messages): PropertyInput | string {
   }
   if (!FREQUENCIES.includes(frequency)) return m.badFrequency;
 
+  // Kaution ist freiwillig; ein leeres Feld ergibt NaN und bedeutet "keine".
+  const deposit = number(formData, "deposit_amount");
+  if (text(formData, "deposit_amount") && (!Number.isFinite(deposit) || deposit < 0)) {
+    return m.needAmount;
+  }
+
   return {
     name,
     location_id: text(formData, "location_id") || null,
@@ -62,6 +69,7 @@ function readProperty(formData: FormData, m: Messages): PropertyInput | string {
     term_months,
     payment_frequency: frequency,
     ta24: formData.get("ta24") === "on",
+    deposit_amount: deposit > 0 ? deposit : 0,
     notes: text(formData, "notes"),
   };
 }

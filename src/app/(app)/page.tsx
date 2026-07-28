@@ -9,7 +9,14 @@ import { fill, plural } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Dashboard" };
 
-type Totals = { due: number; received: number; credits: number; balance: number };
+type Totals = {
+  due: number;
+  received: number;
+  credits: number;
+  balance: number;
+  /** Verwahrte Kautionen — bewusst außerhalb des Saldos. */
+  deposit: number;
+};
 
 function sum(list: PropertyWithSummary[]): Totals {
   return list.reduce(
@@ -18,8 +25,9 @@ function sum(list: PropertyWithSummary[]): Totals {
       received: acc.received + p.summary.totalReceived,
       credits: acc.credits + p.summary.totalCredits,
       balance: acc.balance + p.summary.balance,
+      deposit: acc.deposit + p.deposit.held,
     }),
-    { due: 0, received: 0, credits: 0, balance: 0 },
+    { due: 0, received: 0, credits: 0, balance: 0, deposit: 0 },
   );
 }
 
@@ -59,7 +67,7 @@ export default async function DashboardPage({
     return a.localeCompare(b, "de");
   });
 
-  const columnCount = canEdit ? 8 : 7;
+  const columnCount = canEdit ? 9 : 8;
 
   return (
     <div className="space-y-6">
@@ -120,6 +128,7 @@ export default async function DashboardPage({
                   <th className="px-5 py-3 text-right font-medium">{t.dashboard.dueSoFar}</th>
                   <th className="px-5 py-3 text-right font-medium">{t.dashboard.received}</th>
                   <th className="px-5 py-3 text-right font-medium">{t.dashboard.balance}</th>
+                  <th className="px-5 py-3 text-right font-medium">{t.deposits.title}</th>
                   <th className="px-5 py-3 text-right font-medium">{t.dashboard.remaining}</th>
                   <th className="px-5 py-3 font-medium">{t.dashboard.contractEnd}</th>
                   <th className="px-5 py-3 text-center font-medium">TA24</th>
@@ -189,6 +198,9 @@ export default async function DashboardPage({
                           {f.euro(p.summary.balance)}
                         </td>
                         <td className="tabular px-5 py-3 text-right text-muted">
+                          {p.deposit.held > 0 ? f.euro(p.deposit.held) : t.common.none}
+                        </td>
+                        <td className="tabular px-5 py-3 text-right text-muted">
                           {p.summary.remainingMonths > 0
                             ? fill(t.dashboard.months, { n: p.summary.remainingMonths })
                             : t.common.none}
@@ -227,7 +239,11 @@ export default async function DashboardPage({
                         <td className="tabular px-5 py-2 text-right">
                           {f.euro(groupTotals.received)}
                         </td>
-                        <td colSpan={canEdit ? 5 : 4} />
+                        <td />
+                        <td className="tabular px-5 py-2 text-right">
+                          {groupTotals.deposit > 0 ? f.euro(groupTotals.deposit) : ""}
+                        </td>
+                        <td colSpan={canEdit ? 4 : 3} />
                       </tr>
                     )}
                   </tbody>
@@ -248,6 +264,9 @@ export default async function DashboardPage({
                   >
                     {f.euro(totals.balance)}
                   </td>
+                  <td className="tabular px-5 py-3 text-right">
+                    {f.euro(totals.deposit)}
+                  </td>
                   <td colSpan={canEdit ? 4 : 3} />
                 </tr>
 
@@ -265,6 +284,9 @@ export default async function DashboardPage({
                       </td>
                       <td className="tabular px-5 py-2 text-right">
                         {f.euro(hiddenTotals.balance)}
+                      </td>
+                      <td className="tabular px-5 py-2 text-right">
+                        {f.euro(hiddenTotals.deposit)}
                       </td>
                       <td colSpan={canEdit ? 4 : 3} />
                     </tr>
@@ -284,6 +306,9 @@ export default async function DashboardPage({
                         }`}
                       >
                         {f.euro(totals.balance + hiddenTotals.balance)}
+                      </td>
+                      <td className="tabular px-5 py-2 text-right">
+                        {f.euro(totals.deposit + hiddenTotals.deposit)}
                       </td>
                       <td colSpan={canEdit ? 4 : 3} />
                     </tr>

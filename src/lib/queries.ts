@@ -1,9 +1,11 @@
 import { getProfile } from "./auth";
 import { createClient } from "./supabase/server";
+import { summarizeDeposits, taxableRetentions, type DepositSummary } from "./deposits";
 import { summarize, type PropertySummary } from "./rent";
 import type {
   ContractHistoryEntry,
   Credit,
+  Deposit,
   Location,
   Payment,
   PaymentSource,
@@ -16,6 +18,8 @@ import type {
 
 export type PropertyWithSummary = Property & {
   summary: PropertySummary;
+  /** Kautionen — bewusst getrennt vom Saldo geführt. */
+  deposit: DepositSummary;
   /** Aufgelöster Standortname, null wenn keiner hinterlegt ist. */
   location: string | null;
 };
@@ -61,11 +65,12 @@ function groupBy<T extends { property_id: string }>(rows: T[]) {
 export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]> {
   const supabase = await createClient();
 
-  const [properties, periods, payments, credits, locations] = await Promise.all([
+  const [properties, periods, payments, credits, deposits, locations] = await Promise.all([
     supabase.from("properties").select("*").order("name"),
     fetchAll<RentPeriod>(supabase, "rent_periods"),
     fetchAll<Payment>(supabase, "payments"),
     fetchAll<Credit>(supabase, "credits"),
+    fetchAll<Deposit>(supabase, "deposits"),
     supabase.from("locations").select("*"),
   ]);
 
@@ -74,6 +79,7 @@ export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]>
   const byPeriod = groupBy(periods);
   const byPayment = groupBy(payments);
   const byCredit = groupBy(credits);
+  const byDeposit = groupBy(deposits);
   const locationName = new Map(
     ((locations.data ?? []) as Location[]).map((l) => [l.id, l.name]),
   );
@@ -84,6 +90,7 @@ export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]>
     location: property.location_id
       ? (locationName.get(property.location_id) ?? null)
       : null,
+    deposit: summarizeDeposits(byDeposit.get(property.id) ?? []),
     summary: summarize(
       property,
       byPeriod.get(property.id) ?? [],
@@ -101,6 +108,8 @@ export type PropertyDetail = {
   periods: RentPeriod[];
   payments: Payment[];
   credits: Credit[];
+  deposits: Deposit[];
+  depositSummary: DepositSummary;
   documents: PropertyDocument[];
   history: ContractHistoryEntry[];
   summary: PropertySummary;
@@ -129,10 +138,11 @@ export async function getPropertyDetail(
         .maybeSingle()
     : null;
 
-  const [periods, payments, credits, documents, history] = await Promise.all([
+  const [periods, payments, credits, deposits, documents, history] = await Promise.all([
     supabase.from("rent_periods").select("*").eq("property_id", id).order("valid_from"),
     supabase.from("payments").select("*").eq("property_id", id).order("paid_on", { ascending: false }),
     supabase.from("credits").select("*").eq("property_id", id).order("credited_on", { ascending: false }),
+    supabase.from("deposits").select("*").eq("property_id", id).order("happened_on", { ascending: false }),
     supabase.from("property_documents").select("*").eq("property_id", id).order("uploaded_at", { ascending: false }),
     supabase.from("contract_history").select("*").eq("property_id", id).order("changed_at", { ascending: false }),
   ]);
@@ -141,6 +151,7 @@ export async function getPropertyDetail(
   const periodRows = (periods.data ?? []) as RentPeriod[];
   const paymentRows = (payments.data ?? []) as Payment[];
   const creditRows = (credits.data ?? []) as Credit[];
+  const depositRows = (deposits.data ?? []) as Deposit[];
 
   return {
     property: typed,
@@ -148,6 +159,8 @@ export async function getPropertyDetail(
     periods: periodRows,
     payments: paymentRows,
     credits: creditRows,
+    deposits: depositRows,
+    depositSummary: summarizeDeposits(depositRows),
     documents: (documents.data ?? []) as PropertyDocument[],
     history: (history.data ?? []) as ContractHistoryEntry[],
     summary: summarize(typed, periodRows, paymentRows, creditRows),
@@ -198,12 +211,14 @@ export type Ta24Report = {
 export async function getTa24Report(): Promise<Ta24Report> {
   const supabase = await createClient();
 
-  const [propertiesResult, locationsResult, payments, credits] = await Promise.all([
-    supabase.from("properties").select("*").eq("ta24", true).order("name"),
-    supabase.from("locations").select("*"),
-    fetchAll<Payment>(supabase, "payments"),
-    fetchAll<Credit>(supabase, "credits"),
-  ]);
+  const [propertiesResult, locationsResult, payments, credits, deposits] =
+    await Promise.all([
+      supabase.from("properties").select("*").eq("ta24", true).order("name"),
+      supabase.from("locations").select("*"),
+      fetchAll<Payment>(supabase, "payments"),
+      fetchAll<Credit>(supabase, "credits"),
+      fetchAll<Deposit>(supabase, "deposits"),
+    ]);
 
   if (propertiesResult.error) throw propertiesResult.error;
 
@@ -221,6 +236,13 @@ export async function getTa24Report(): Promise<Ta24Report> {
       payment,
     ]);
   }
+
+  // Verwahrte Kautionen sind keine Einnahme — nur der Einbehalt ist eine.
+  // Wurde er gegen einen Mietrückstand verrechnet, steckt er schon in den
+  // Zahlungen; taxableRetentions() lässt ihn deshalb aus.
+  const retentionsByProperty = groupBy(
+    taxableRetentions(deposits).filter((d) => relevant.has(d.property_id)),
+  );
 
   const creditsByProperty = new Map<string, Credit[]>();
   let hasReductions = false;
@@ -247,6 +269,23 @@ export async function getTa24Report(): Promise<Ta24Report> {
     for (const payment of byProperty.get(property.id) ?? []) {
       const year = Number(payment.paid_on.slice(0, 4));
       const amount = Number(payment.amount);
+
+      years.add(year);
+
+      const cell = byYear.get(year) ?? emptyCell();
+      cell.count += 1;
+      cell.sum += amount;
+      byYear.set(year, cell);
+
+      const overall = totalsByYear.get(year) ?? emptyCell();
+      overall.count += 1;
+      overall.sum += amount;
+      totalsByYear.set(year, overall);
+    }
+
+    for (const retention of retentionsByProperty.get(property.id) ?? []) {
+      const year = Number(retention.happened_on.slice(0, 4));
+      const amount = Number(retention.amount);
 
       years.add(year);
 
@@ -367,12 +406,14 @@ export type IncomeReport = {
 export async function getAnnualIncome(): Promise<IncomeReport> {
   const supabase = await createClient();
 
-  const [propertiesResult, locationsResult, payments, credits] = await Promise.all([
-    supabase.from("properties").select("*").order("name"),
-    supabase.from("locations").select("*"),
-    fetchAll<Payment>(supabase, "payments"),
-    fetchAll<Credit>(supabase, "credits"),
-  ]);
+  const [propertiesResult, locationsResult, payments, credits, deposits] =
+    await Promise.all([
+      supabase.from("properties").select("*").order("name"),
+      supabase.from("locations").select("*"),
+      fetchAll<Payment>(supabase, "payments"),
+      fetchAll<Credit>(supabase, "credits"),
+      fetchAll<Deposit>(supabase, "deposits"),
+    ]);
 
   if (propertiesResult.error) throw propertiesResult.error;
 
@@ -383,6 +424,7 @@ export async function getAnnualIncome(): Promise<IncomeReport> {
 
   const byPayment = groupBy(payments);
   const byCredit = groupBy(credits);
+  const byRetention = groupBy(taxableRetentions(deposits));
   const years = new Set<number>();
   const locations = new Set<string>();
   let hasReductions = false;
@@ -403,6 +445,18 @@ export async function getAnnualIncome(): Promise<IncomeReport> {
         byYear.get(year) ?? { count: 0, sum: 0, reductions: 0, taxable: 0 };
       cell.count += 1;
       cell.sum += Number(payment.amount);
+      byYear.set(year, cell);
+    }
+
+    // Einbehaltene Kautionen sind im Jahr des Einbehalts Einnahme.
+    for (const retention of byRetention.get(property.id) ?? []) {
+      const year = Number(retention.happened_on.slice(0, 4));
+      years.add(year);
+
+      const cell =
+        byYear.get(year) ?? { count: 0, sum: 0, reductions: 0, taxable: 0 };
+      cell.count += 1;
+      cell.sum += Number(retention.amount);
       byYear.set(year, cell);
     }
 

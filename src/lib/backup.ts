@@ -13,6 +13,8 @@ const TABLES: [table: string, file: string][] = [
   ["rent_periods", "mietstaffel"],
   ["payments", "zahlungen"],
   ["credits", "gutschriften"],
+  ["deposits", "kautionen"],
+  ["property_notes", "notizen"],
   ["locations", "standorte"],
   ["payment_sources", "zahlungsquellen"],
   ["property_documents", "dokumente"],

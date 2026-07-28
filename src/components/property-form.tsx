@@ -107,6 +107,17 @@ export default function PropertyForm({
             <Input name="amount" inputMode="decimal" placeholder="1250,00" />
           </Field>
         )}
+
+        <Field label={t.deposits.agreed} hint={t.deposits.agreedHint}>
+          <Input
+            name="deposit_amount"
+            inputMode="decimal"
+            placeholder="2500,00"
+            defaultValue={
+              property?.deposit_amount ? String(property.deposit_amount) : ""
+            }
+          />
+        </Field>
       </div>
 
       <Field label={t.form.notes}>

@@ -90,6 +90,8 @@ create table if not exists properties (
   term_months       int  not null check (term_months > 0),
   payment_frequency payment_frequency not null default 'monthly',
   ta24              boolean not null default false,
+  -- Vertraglich vereinbarte Kaution; 0 bedeutet "keine vereinbart".
+  deposit_amount    numeric(12,2) not null default 0,
   notes             text not null default '',
   archived          boolean not null default false,
   created_at        timestamptz not null default now(),
@@ -126,6 +128,36 @@ create table if not exists payments (
 );
 
 create index if not exists payments_property_idx on payments (property_id, paid_on);
+
+
+-- ---------- Kautionen ----------
+-- Bewusst eine eigene Tabelle statt einer weiteren Zahlungsquelle: eine
+-- Kaution kommt ja ebenfalls per Überweisung oder bar. So können Saldo,
+-- TA24 und Jahreseinnahmen sie gar nicht erst einrechnen — sie lesen
+-- ausschliesslich die Tabelle payments.
+
+create table if not exists deposits (
+  id          uuid primary key default gen_random_uuid(),
+  property_id uuid not null references properties on delete cascade,
+
+  -- received = erhalten, refunded = zurückgezahlt, retained = einbehalten
+  kind        text not null check (kind in ('received', 'refunded', 'retained')),
+
+  happened_on date not null,
+  amount      numeric(12,2) not null check (amount > 0),
+  source_id   uuid references payment_sources on delete set null,
+  note        text not null default '',
+
+  -- Nur bei kind = 'retained': Wurde der Einbehalt gegen einen Mietrückstand
+  -- verrechnet, entsteht eine echte Zahlung. Sie zählt dann in Saldo und
+  -- Steuerauswertung, der Einbehalt selbst darf es deshalb nicht mehr.
+  payment_id  uuid references payments on delete set null,
+
+  created_at  timestamptz not null default now(),
+  created_by  uuid references profiles on delete set null
+);
+
+create index if not exists deposits_property_idx on deposits (property_id, happened_on);
 
 
 -- ---------- Gutschriften (z. B. vom Mieter verauslagte Handwerkerkosten) ----------
@@ -235,7 +267,8 @@ create policy payment_sources_admin_write on payment_sources
 do $$
 declare t text;
 begin
-  foreach t in array array['properties', 'rent_periods', 'payments', 'credits', 'property_documents']
+  foreach t in array array['properties', 'rent_periods', 'payments', 'credits',
+                        'deposits', 'property_documents']
   loop
     execute format('drop policy if exists %I_select on %I', t, t);
     execute format(
@@ -252,6 +285,55 @@ end $$;
 drop policy if exists contract_history_select on contract_history;
 create policy contract_history_select on contract_history
   for select to authenticated using (true);
+
+
+-- ---------- Notizen am Objekt ----------
+-- Ohne Empfänger eine Aktennotiz für alle, mit Empfänger nur für die
+-- beiden Beteiligten. Die Regel steht in den Richtlinien, nicht in der
+-- Oberfläche.
+
+create table if not exists property_notes (
+  id           uuid primary key default gen_random_uuid(),
+  property_id  uuid not null references properties on delete cascade,
+  author_id    uuid not null references profiles on delete cascade,
+  recipient_id uuid references profiles on delete set null,
+  parent_id    uuid references property_notes on delete cascade,
+  body         text not null,
+  created_at   timestamptz not null default now(),
+  read_at      timestamptz
+);
+
+create index if not exists property_notes_property_idx
+  on property_notes (property_id, created_at desc);
+create index if not exists property_notes_recipient_idx
+  on property_notes (recipient_id, read_at);
+
+alter table property_notes enable row level security;
+
+-- Ohne Empfänger für alle sichtbar, sonst nur für Absender und Empfänger.
+drop policy if exists property_notes_select on property_notes;
+create policy property_notes_select on property_notes
+  for select to authenticated using (
+    recipient_id is null
+    or author_id = auth.uid()
+    or recipient_id = auth.uid()
+  );
+
+-- Schreiben darf jeder Angemeldete, aber nur im eigenen Namen.
+drop policy if exists property_notes_insert on property_notes;
+create policy property_notes_insert on property_notes
+  for insert to authenticated with check (author_id = auth.uid());
+
+-- Als gelesen markieren darf nur der Empfänger.
+drop policy if exists property_notes_update on property_notes;
+create policy property_notes_update on property_notes
+  for update to authenticated
+  using (recipient_id = auth.uid()) with check (recipient_id = auth.uid());
+
+-- Löschen darf nur, wer die Notiz geschrieben hat.
+drop policy if exists property_notes_delete on property_notes;
+create policy property_notes_delete on property_notes
+  for delete to authenticated using (author_id = auth.uid());
 
 
 -- ============================================================
