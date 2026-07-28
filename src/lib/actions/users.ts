@@ -54,7 +54,7 @@ export async function createUser(
   // Der Trigger legt das Profil an; Name und Rolle hier absichern.
   await admin.from("profiles").update({ full_name, role }).eq("id", data.user.id);
 
-  revalidatePath("/benutzer");
+  revalidatePath("/einstellungen");
   return { success: fill(t.actions.userCreated, { name: full_name }) };
 }
 
@@ -79,7 +79,7 @@ export async function updateUserRole(formData: FormData) {
   await admin.from("profiles").update({ role }).eq("id", id);
   await admin.auth.admin.updateUserById(id, { user_metadata: { role } });
 
-  revalidatePath("/benutzer");
+  revalidatePath("/einstellungen");
 }
 
 export async function resetUserPassword(
@@ -112,7 +112,7 @@ export async function deleteUser(formData: FormData) {
   const admin = createAdminClient();
   await admin.auth.admin.deleteUser(id);
 
-  revalidatePath("/benutzer");
+  revalidatePath("/einstellungen");
 }
 
 /* ---------------- Zahlungsquellen ---------------- */

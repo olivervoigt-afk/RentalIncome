@@ -35,7 +35,7 @@ export async function addDeposit(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireEditor();
+  const profile = await requireEditor();
   const { t } = await getDict();
 
   const property_id = text(formData, "property_id");
@@ -62,6 +62,7 @@ export async function addDeposit(
         amount,
         source_id,
         note: note ? `${t.deposits.fromDeposit} — ${note}` : t.deposits.fromDeposit,
+        created_by: profile.id,
       })
       .select("id")
       .single();
@@ -78,14 +79,14 @@ export async function addDeposit(
     source_id,
     note,
     payment_id,
+    created_by: profile.id,
   });
 
   if (error) return { error: error.message };
 
   revalidatePath("/");
   revalidatePath(`/objekte/${property_id}`);
-  revalidatePath("/ta24");
-  revalidatePath("/einnahmen");
+  revalidatePath("/auswertungen");
   return { success: t.deposits.saved };
 }
 
@@ -113,6 +114,5 @@ export async function deleteDeposit(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath(`/objekte/${property_id}`);
-  revalidatePath("/ta24");
-  revalidatePath("/einnahmen");
+  revalidatePath("/auswertungen");
 }
