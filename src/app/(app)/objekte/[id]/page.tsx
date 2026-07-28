@@ -121,10 +121,16 @@ export default async function PropertyDetailPage({
       </div>
 
       {/* Kennzahlen — ebenfalls immer sichtbar */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat label={t.dashboard.dueSoFar} value={f.euro(summary.totalDue)} />
         <Stat label={t.dashboard.received} value={f.euro(summary.totalReceived)} />
         <Stat label={t.dashboard.credits} value={f.euro(summary.totalCredits)} />
+        {/* Vor dem Saldo, aber bewusst nicht darin enthalten. */}
+        <Stat
+          label={t.deposits.title}
+          value={f.euro(depositSummary.held)}
+          hint={t.deposits.notInBalance}
+        />
         <Stat
           label={t.dashboard.balance}
           value={f.euro(summary.balance)}
@@ -132,16 +138,6 @@ export default async function PropertyDetailPage({
           hint={summary.balance < 0 ? t.property.arrears : t.property.settled}
         />
       </div>
-
-      {(depositSummary.held > 0 || Number(property.deposit_amount) > 0) && (
-        <p className="text-sm text-muted">
-          {t.deposits.held}:{" "}
-          <span className="tabular font-medium text-foreground">
-            {f.euro(depositSummary.held)}
-          </span>{" "}
-          — {t.deposits.hint}
-        </p>
-      )}
 
       <TabNav
         active={tab}
