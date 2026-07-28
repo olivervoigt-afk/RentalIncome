@@ -81,6 +81,36 @@ export function installments(property: Property, periods: RentPeriod[]): Install
   return result;
 }
 
+/**
+ * Jahresmiete auf Basis der heute gültigen Rate — was der Vertrag über
+ * zwölf Monate einbringt, wenn sich nichts ändert. Bei abgelaufenen
+ * Verträgen null, denn sie bringen nichts mehr.
+ */
+export function annualRent(
+  property: Property,
+  periods: RentPeriod[],
+  asOf: Date = new Date(),
+): number {
+  if (isExpired(property, asOf)) return 0;
+
+  const rate = rateAt(asOf, periods) ?? rateAt(parseDate(property.start_date), periods);
+  if (rate === null) return 0;
+
+  return (rate * 12) / FREQUENCY_MONTHS[property.payment_frequency];
+}
+
+/** Summe der Raten, die im angegebenen Zeitfenster fällig werden. */
+export function dueBetween(
+  property: Property,
+  periods: RentPeriod[],
+  from: Date,
+  to: Date,
+): number {
+  return installments(property, periods)
+    .filter((i) => i.dueDate >= from && i.dueDate <= to)
+    .reduce((total, i) => total + (i.amount ?? 0), 0);
+}
+
 export type PropertySummary = {
   /** Summe aller bis zum Stichtag fälligen Raten. */
   totalDue: number;

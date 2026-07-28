@@ -2,10 +2,15 @@ import Link from "next/link";
 import ArchiveToggle from "@/components/archive-toggle";
 import { Badge, ButtonLink, Card, EmptyState } from "@/components/ui";
 import { getProfile } from "@/lib/auth";
-import { formatters } from "@/lib/format";
+import { formatters, type Formatters } from "@/lib/format";
 import { getDict } from "@/lib/i18n";
-import { getPropertiesWithSummary, type PropertyWithSummary } from "@/lib/queries";
-import { fill, plural } from "@/lib/i18n/dictionaries";
+import {
+  getPropertiesWithSummary,
+  getRecentActivity,
+  type ActivityEntry,
+  type PropertyWithSummary,
+} from "@/lib/queries";
+import { fill, plural, type Dict } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Dashboard" };
 
@@ -42,7 +47,7 @@ function daysUntil(end: Date, now: Date): number {
   return Math.ceil((end.getTime() - now.getTime()) / 86_400_000);
 }
 
-const VIEWS = ["rueckstand", "kaution", "ende"] as const;
+const VIEWS = ["faellig", "rueckstand", "kaution", "ende"] as const;
 type View = (typeof VIEWS)[number];
 
 export default async function DashboardPage({
@@ -53,9 +58,10 @@ export default async function DashboardPage({
   const { archiv, blick } = await searchParams;
   const showArchived = archiv === "1";
 
-  const [profile, all, { t, locale }] = await Promise.all([
+  const [profile, all, activity, { t, locale }] = await Promise.all([
     getProfile(),
     getPropertiesWithSummary(),
+    getRecentActivity(),
     getDict(),
   ]);
   const f = formatters(locale);
@@ -77,6 +83,13 @@ export default async function DashboardPage({
     return days > 0 && days <= ENDING_SOON_DAYS;
   });
   const incomeThisYear = active.reduce((total, p) => total + p.receivedThisYear, 0);
+  const dueSoonList = active.filter((p) => p.dueSoon > 0);
+  const dueSoonTotal = dueSoonList.reduce((total, p) => total + p.dueSoon, 0);
+  const dueSoonArrears = dueSoonList.filter((p) => p.summary.balance < -CENT).length;
+  const annualRentTotal = active.reduce((total, p) => total + p.annualRent, 0);
+
+  const horizon = new Date(now);
+  horizon.setDate(horizon.getDate() + 30);
 
   // Die Kacheln beschreiben immer den vollen aktiven Bestand, auch während
   // ein Filter läuft — sonst zeigte die Kachel ihre eigene Auswahl an.
@@ -85,7 +98,9 @@ export default async function DashboardPage({
 
   const view: View | null = VIEWS.includes(blick as View) ? (blick as View) : null;
   const filtered =
-    view === "rueckstand"
+    view === "faellig"
+      ? dueSoonList
+      : view === "rueckstand"
       ? inArrears
       : view === "kaution"
         ? withDeposit
@@ -113,7 +128,9 @@ export default async function DashboardPage({
   const columnCount = canEdit ? 7 : 6;
 
   const viewLabel =
-    view === "rueckstand"
+    view === "faellig"
+      ? t.dashboard.dueSoon
+      : view === "rueckstand"
       ? t.dashboard.arrears
       : view === "kaution"
         ? t.dashboard.depositsHeld
@@ -144,7 +161,21 @@ export default async function DashboardPage({
       {/* Was heute Aufmerksamkeit verdient — jede Kachel filtert die Tabelle.
           Kumulierte Lebenssummen standen hier früher, beantworteten aber
           keine Frage, die man beim Öffnen hat. */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          label={t.dashboard.dueSoon}
+          value={f.euro(dueSoonTotal)}
+          hint={
+            dueSoonList.length > 0
+              ? fill(t.dashboard.dueSoonHint, { date: f.date(horizon) }) +
+                (dueSoonArrears > 0
+                  ? fill(t.dashboard.dueSoonArrears, { n: dueSoonArrears })
+                  : "")
+              : t.dashboard.dueSoonNone
+          }
+          href={dueSoonList.length > 0 ? withArchive("/?blick=faellig") : undefined}
+          active={view === "faellig"}
+        />
         <StatCard
           label={t.dashboard.arrears}
           value={f.euro(arrearsTotal)}
@@ -163,12 +194,18 @@ export default async function DashboardPage({
           hint={t.dashboard.incomeYearHint}
           href="/auswertungen"
         />
+
         <StatCard
           label={t.dashboard.depositsHeld}
           value={f.euro(activeTotals.deposit)}
           hint={t.dashboard.depositsHint}
           href={withDeposit.length > 0 ? withArchive("/?blick=kaution") : undefined}
           active={view === "kaution"}
+        />
+        <StatCard
+          label={t.dashboard.annualRent}
+          value={f.euro(annualRentTotal)}
+          hint={t.dashboard.annualRentHint}
         />
         <StatCard
           label={t.dashboard.endingSoon}
@@ -181,6 +218,8 @@ export default async function DashboardPage({
           active={view === "ende"}
         />
       </div>
+
+      <ActivityCard t={t} f={f} entries={activity} />
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
@@ -464,6 +503,63 @@ function StatCard({
       <Link href={href} className="block px-5 py-4">
         {body}
       </Link>
+    </Card>
+  );
+}
+
+/**
+ * Was zuletzt eingetragen wurde. Beantwortet die Frage "was hat sich seit
+ * meinem letzten Besuch getan" — die einzige, die aus den Zahlen allein
+ * nicht hervorgeht.
+ */
+function ActivityCard({
+  t,
+  f,
+  entries,
+}: {
+  t: Dict;
+  f: Formatters;
+  entries: ActivityEntry[];
+}) {
+  const kindLabel: Record<ActivityEntry["kind"], string> = {
+    payment: t.dashboard.kindPayment,
+    credit: t.dashboard.kindCredit,
+    deposit: t.dashboard.kindDeposit,
+  };
+
+  return (
+    <Card>
+      <div className="border-b border-border px-5 py-3">
+        <h2 className="text-base font-semibold">{t.dashboard.activity}</h2>
+      </div>
+
+      {entries.length === 0 ? (
+        <p className="px-5 py-6 text-center text-sm text-muted">
+          {t.dashboard.activityEmpty}
+        </p>
+      ) : (
+        <ul className="grid gap-x-8 gap-y-3 px-5 py-4 sm:grid-cols-2 lg:grid-cols-3">
+          {entries.map((entry) => (
+            <li key={`${entry.kind}-${entry.id}`} className="text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <Link
+                  href={`/objekte/${entry.propertyId}`}
+                  className="truncate font-medium hover:text-accent hover:underline"
+                >
+                  {entry.propertyName}
+                </Link>
+                <span className="tabular whitespace-nowrap font-medium">
+                  {f.euro(entry.amount)}
+                </span>
+              </div>
+              <p className="text-xs text-muted">
+                {kindLabel[entry.kind]} · {f.date(entry.happenedOn)}
+                {entry.by && ` · ${fill(t.dashboard.activityBy, { name: entry.by })}`}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }

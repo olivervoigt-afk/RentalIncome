@@ -1,7 +1,12 @@
 import { getProfile } from "./auth";
 import { createClient } from "./supabase/server";
 import { summarizeDeposits, taxableRetentions, type DepositSummary } from "./deposits";
-import { summarize, type PropertySummary } from "./rent";
+import {
+  annualRent,
+  dueBetween,
+  summarize,
+  type PropertySummary,
+} from "./rent";
 import type {
   ContractHistoryEntry,
   Credit,
@@ -22,6 +27,10 @@ export type PropertyWithSummary = Property & {
   deposit: DepositSummary;
   /** Im laufenden Kalenderjahr eingegangene Miete. */
   receivedThisYear: number;
+  /** Jahresmiete auf Basis der heute gültigen Rate. */
+  annualRent: number;
+  /** Summe der Raten, die in den nächsten 30 Tagen fällig werden. */
+  dueSoon: number;
   /** Aufgelöster Standortname, null wenn keiner hinterlegt ist. */
   location: string | null;
 };
@@ -87,6 +96,8 @@ export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]>
   );
   const now = new Date();
   const thisYear = String(now.getFullYear());
+  const in30Days = new Date(now);
+  in30Days.setDate(in30Days.getDate() + 30);
 
   return (properties.data as Property[]).map((property) => ({
     ...property,
@@ -97,6 +108,8 @@ export async function getPropertiesWithSummary(): Promise<PropertyWithSummary[]>
     receivedThisYear: (byPayment.get(property.id) ?? [])
       .filter((payment) => payment.paid_on.startsWith(thisYear))
       .reduce((total, payment) => total + Number(payment.amount), 0),
+    annualRent: annualRent(property, byPeriod.get(property.id) ?? [], now),
+    dueSoon: dueBetween(property, byPeriod.get(property.id) ?? [], now, in30Days),
     summary: summarize(
       property,
       byPeriod.get(property.id) ?? [],
@@ -422,4 +435,87 @@ export async function getUnreadNoteCount(): Promise<number> {
     .is("read_at", null);
 
   return count ?? 0;
+}
+
+
+export type ActivityEntry = {
+  id: string;
+  kind: "payment" | "credit" | "deposit";
+  propertyId: string;
+  propertyName: string;
+  amount: number;
+  /** Datum des Vorgangs, nicht der Erfassung. */
+  happenedOn: string;
+  createdAt: string;
+  by: string | null;
+};
+
+/**
+ * Die zuletzt erfassten Geldbewegungen über alle Objekte.
+ *
+ * Massgeblich ist der Zeitpunkt der Erfassung, nicht der des Vorgangs: die
+ * Frage lautet "was ist seit meinem letzten Besuch dazugekommen", und eine
+ * heute nachgetragene Zahlung von 2023 gehört genauso dazu.
+ */
+export async function getRecentActivity(limit = 6): Promise<ActivityEntry[]> {
+  const supabase = await createClient();
+
+  const [payments, credits, deposits, properties, profiles] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("id, property_id, amount, paid_on, created_at, created_by")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("credits")
+      .select("id, property_id, amount, credited_on, created_at, created_by")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("deposits")
+      .select("id, property_id, amount, happened_on, created_at, created_by")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    supabase.from("properties").select("id, name"),
+    supabase.from("profiles").select("id, full_name, email"),
+  ]);
+
+  const propertyName = new Map(
+    ((properties.data ?? []) as Pick<Property, "id" | "name">[]).map((p) => [p.id, p.name]),
+  );
+  const personName = new Map(
+    ((profiles.data ?? []) as Profile[]).map((p) => [p.id, p.full_name || p.email]),
+  );
+
+  type Row = {
+    id: string;
+    property_id: string;
+    amount: number;
+    created_at: string;
+    created_by: string | null;
+  };
+
+  const build = (
+    rows: Row[],
+    kind: ActivityEntry["kind"],
+    dateOf: (row: Row & Record<string, unknown>) => string,
+  ): ActivityEntry[] =>
+    rows.map((row) => ({
+      id: row.id,
+      kind,
+      propertyId: row.property_id,
+      propertyName: propertyName.get(row.property_id) ?? "—",
+      amount: Number(row.amount),
+      happenedOn: dateOf(row as Row & Record<string, unknown>),
+      createdAt: row.created_at,
+      by: row.created_by ? (personName.get(row.created_by) ?? null) : null,
+    }));
+
+  return [
+    ...build((payments.data ?? []) as Row[], "payment", (r) => String(r.paid_on)),
+    ...build((credits.data ?? []) as Row[], "credit", (r) => String(r.credited_on)),
+    ...build((deposits.data ?? []) as Row[], "deposit", (r) => String(r.happened_on)),
+  ]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
 }
