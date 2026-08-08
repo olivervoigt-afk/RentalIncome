@@ -1,6 +1,12 @@
 -- ============================================================
---  RentalIncome — Datenbankschema
---  Im Supabase SQL Editor ausführen (einmalig).
+--  Oylio Rental Dashboard — vollständiges Datenbankschema
+--  Einmalig im Supabase SQL Editor ausführen.
+--
+--  Diese Datei bildet den aktuellen Stand ab. Für eine Neuinstallation
+--  genügt sie allein; die Dateien unter migrations/ dokumentieren nur,
+--  wie eine bestehende Datenbank dorthin gekommen ist.
+--
+--  Mehrfaches Ausführen ist unschädlich.
 -- ============================================================
 
 -- ---------- Typen ----------
@@ -22,8 +28,14 @@ create table if not exists profiles (
   email      text not null,
   full_name  text not null default '',
   role       user_role not null default 'viewer',
+  -- Sprache der Oberfläche je Benutzer.
+  locale     text not null default 'de' check (locale in ('de', 'en')),
   created_at timestamptz not null default now()
 );
+
+alter table profiles
+  add column if not exists locale text not null default 'de'
+  check (locale in ('de', 'en'));
 
 -- Legt automatisch ein Profil an, sobald ein Auth-Benutzer erstellt wird.
 create or replace function public.handle_new_user()
@@ -67,7 +79,7 @@ language sql stable
 as $$ select public.my_role() = 'admin' $$;
 
 
--- ---------- Zahlungsquellen (im Admin-Bereich pflegbar) ----------
+-- ---------- Zahlungsquellen (in den Einstellungen pflegbar) ----------
 create table if not exists payment_sources (
   id         uuid primary key default gen_random_uuid(),
   name       text not null unique,
@@ -80,15 +92,31 @@ insert into payment_sources (name, sort_order) values
 on conflict (name) do nothing;
 
 
+-- ---------- Standorte (gepflegte Liste statt freiem Text) ----------
+-- Das Dashboard gruppiert danach und die Auswertungen filtern darüber;
+-- deshalb ist der Standort am Objekt Pflicht.
+create table if not exists locations (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null unique,
+  active     boolean not null default true,
+  sort_order int not null default 0
+);
+
+insert into locations (name, sort_order) values
+  ('Deutschland', 1), ('Malta', 2)
+on conflict (name) do nothing;
+
+
 -- ---------- Objekte ----------
 create table if not exists properties (
   id                uuid primary key default gen_random_uuid(),
   name              text not null,
-  location          text not null default '',
+  location_id       uuid references locations on delete set null,
   tenant_name       text not null default '',
   start_date        date not null,
   term_months       int  not null check (term_months > 0),
   payment_frequency payment_frequency not null default 'monthly',
+  -- Kennzeichen für die maltesische Steuererklärung TA24.
   ta24              boolean not null default false,
   -- Vertraglich vereinbarte Kaution; 0 bedeutet "keine vereinbart".
   deposit_amount    numeric(12,2) not null default 0,
@@ -167,6 +195,10 @@ create table if not exists credits (
   credited_on  date not null,
   amount       numeric(12,2) not null,
   reason       text not null default '',
+  -- Mindert die steuerpflichtige Einnahme. Nur ankreuzen, wenn bereits
+  -- erhaltene Miete erstattet wurde — eine von vornherein erlassene Miete
+  -- taucht ohnehin nie als Einnahme auf.
+  reduces_ta24 boolean not null default false,
   created_at   timestamptz not null default now(),
   created_by   uuid references profiles on delete set null
 );
@@ -221,6 +253,8 @@ create table if not exists property_documents (
   id           uuid primary key default gen_random_uuid(),
   property_id  uuid not null references properties on delete cascade,
   file_name    text not null,
+  -- Freie Beschreibung, etwa "Nachtrag 2024" — kann leer bleiben.
+  note         text not null default '',
   storage_path text not null,
   size_bytes   bigint,
   uploaded_at  timestamptz not null default now(),
@@ -228,6 +262,28 @@ create table if not exists property_documents (
 );
 
 create index if not exists property_documents_property_idx on property_documents (property_id);
+
+
+-- ---------- Notizen am Objekt ----------
+-- Ohne Empfänger eine Aktennotiz für alle, mit Empfänger nur für die
+-- beiden Beteiligten. Die Regel steht in den Richtlinien, nicht in der
+-- Oberfläche.
+
+create table if not exists property_notes (
+  id           uuid primary key default gen_random_uuid(),
+  property_id  uuid not null references properties on delete cascade,
+  author_id    uuid not null references profiles on delete cascade,
+  recipient_id uuid references profiles on delete set null,
+  parent_id    uuid references property_notes on delete cascade,
+  body         text not null,
+  created_at   timestamptz not null default now(),
+  read_at      timestamptz
+);
+
+create index if not exists property_notes_property_idx
+  on property_notes (property_id, created_at desc);
+create index if not exists property_notes_recipient_idx
+  on property_notes (recipient_id, read_at);
 
 
 -- ============================================================
@@ -238,12 +294,15 @@ create index if not exists property_documents_property_idx on property_documents
 
 alter table profiles           enable row level security;
 alter table payment_sources    enable row level security;
+alter table locations          enable row level security;
 alter table properties         enable row level security;
 alter table rent_periods       enable row level security;
 alter table payments           enable row level security;
+alter table deposits           enable row level security;
 alter table credits            enable row level security;
 alter table contract_history   enable row level security;
 alter table property_documents enable row level security;
+alter table property_notes     enable row level security;
 
 -- Profile: jeder sieht alle Namen; nur Admin darf Rollen ändern/anlegen/löschen.
 drop policy if exists profiles_select on profiles;
@@ -254,14 +313,24 @@ drop policy if exists profiles_admin_write on profiles;
 create policy profiles_admin_write on profiles
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
--- Zahlungsquellen: lesen alle, ändern nur Admin.
+-- Stammdaten: lesen alle, pflegen Admin + Bearbeiter.
 drop policy if exists payment_sources_select on payment_sources;
 create policy payment_sources_select on payment_sources
   for select to authenticated using (true);
 
 drop policy if exists payment_sources_admin_write on payment_sources;
-create policy payment_sources_admin_write on payment_sources
-  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists payment_sources_write on payment_sources;
+create policy payment_sources_write on payment_sources
+  for all to authenticated using (public.can_edit()) with check (public.can_edit());
+
+drop policy if exists locations_select on locations;
+create policy locations_select on locations
+  for select to authenticated using (true);
+
+drop policy if exists locations_admin_write on locations;
+drop policy if exists locations_write on locations;
+create policy locations_write on locations
+  for all to authenticated using (public.can_edit()) with check (public.can_edit());
 
 -- Fachdaten: lesen alle, schreiben Admin + Bearbeiter.
 do $$
@@ -286,31 +355,7 @@ drop policy if exists contract_history_select on contract_history;
 create policy contract_history_select on contract_history
   for select to authenticated using (true);
 
-
--- ---------- Notizen am Objekt ----------
--- Ohne Empfänger eine Aktennotiz für alle, mit Empfänger nur für die
--- beiden Beteiligten. Die Regel steht in den Richtlinien, nicht in der
--- Oberfläche.
-
-create table if not exists property_notes (
-  id           uuid primary key default gen_random_uuid(),
-  property_id  uuid not null references properties on delete cascade,
-  author_id    uuid not null references profiles on delete cascade,
-  recipient_id uuid references profiles on delete set null,
-  parent_id    uuid references property_notes on delete cascade,
-  body         text not null,
-  created_at   timestamptz not null default now(),
-  read_at      timestamptz
-);
-
-create index if not exists property_notes_property_idx
-  on property_notes (property_id, created_at desc);
-create index if not exists property_notes_recipient_idx
-  on property_notes (recipient_id, read_at);
-
-alter table property_notes enable row level security;
-
--- Ohne Empfänger für alle sichtbar, sonst nur für Absender und Empfänger.
+-- Notizen: ohne Empfänger für alle sichtbar, sonst nur für die Beteiligten.
 drop policy if exists property_notes_select on property_notes;
 create policy property_notes_select on property_notes
   for select to authenticated using (
