@@ -62,20 +62,40 @@ export type Installment = {
  * fällig, jede weitere im Abstand des Zahlungsrhythmus. Fällt der Stichtag
  * auf einen im Zielmonat nicht existierenden Tag (z. B. 31.), wird auf den
  * letzten Tag des Monats gekürzt.
+ *
+ * Wurde der Fälligkeitstag mitten in der Laufzeit umgestellt, laufen die
+ * Raten bis dahin auf dem alten Tag und danach auf dem neuen. Zwischen der
+ * letzten alten und der ersten neuen Rate liegt dann ein kürzerer Abstand —
+ * es entsteht eine zusätzliche Rate. Genau so wurde es auch abgerechnet.
  */
 export function installments(property: Property, periods: RentPeriod[]): Installment[] {
   const start = parseDate(property.start_date);
   const end = contractEnd(property);
   const step = FREQUENCY_MONTHS[property.payment_frequency];
+  const switchDate = property.due_day_from ? parseDate(property.due_day_from) : null;
   const result: Installment[] = [];
 
+  const add = (dueDate: Date) =>
+    result.push({ dueDate, amount: rateAt(dueDate, periods) });
+
   // Absicherung gegen fehlerhafte Stammdaten (z. B. term_months = 0).
-  const maxCount = Math.ceil(property.term_months / step) + 1;
+  // Nach einer Umstellung können ein paar Termine mehr anfallen als Perioden.
+  const maxCount = Math.ceil(property.term_months / step) + 2;
 
   for (let i = 0; i < maxCount; i++) {
     const dueDate = addMonths(start, i * step);
     if (!isBefore(dueDate, end)) break;
-    result.push({ dueDate, amount: rateAt(dueDate, periods) });
+    // Ab der Umstellung übernimmt die zweite Reihe.
+    if (switchDate && !isBefore(dueDate, switchDate)) break;
+    add(dueDate);
+  }
+
+  if (switchDate) {
+    for (let i = 0; i < maxCount; i++) {
+      const dueDate = addMonths(switchDate, i * step);
+      if (!isBefore(dueDate, end)) break;
+      add(dueDate);
+    }
   }
 
   return result;

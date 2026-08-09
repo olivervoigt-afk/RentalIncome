@@ -43,6 +43,14 @@ export default function OverviewTab({
             value={t.frequency[property.payment_frequency]}
           />
           <Detail label={t.property.volume} value={f.euro(summary.totalContract)} />
+          {/* Nur zeigen, wenn es die Umstellung gab — sonst wäre es eine
+              leere Zeile für einen Sonderfall. */}
+          {property.due_day_from && (
+            <Detail
+              label={t.property.dueFrom}
+              value={f.date(property.due_day_from)}
+            />
+          )}
         </dl>
 
         {property.notes && (

@@ -92,6 +92,14 @@ export default function PropertyForm({
           />
         </Field>
 
+        <Field label={t.form.dueFrom} hint={t.form.dueFromHint}>
+          <Input
+            name="due_day_from"
+            type="date"
+            defaultValue={property?.due_day_from ?? ""}
+          />
+        </Field>
+
         <Field label={t.form.term}>
           <Input
             name="term_months"

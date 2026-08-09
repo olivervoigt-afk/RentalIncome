@@ -55,6 +55,12 @@ export type Property = {
   start_date: string;
   term_months: number;
   payment_frequency: PaymentFrequency;
+  /**
+   * Termin der ersten Rate nach einer Umstellung des Fälligkeitstags.
+   * Sein Kalendertag ist zugleich der neue Fälligkeitstag.
+   * null = nie umgestellt.
+   */
+  due_day_from: string | null;
   ta24: boolean;
   /** Vertraglich vereinbarte Kaution; 0 bedeutet "keine vereinbart". */
   deposit_amount: number;

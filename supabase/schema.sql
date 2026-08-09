@@ -116,6 +116,9 @@ create table if not exists properties (
   start_date        date not null,
   term_months       int  not null check (term_months > 0),
   payment_frequency payment_frequency not null default 'monthly',
+  -- Termin der ersten Rate nach einer Umstellung des Fälligkeitstags; sein
+  -- Kalendertag ist zugleich der neue Fälligkeitstag. NULL = nie umgestellt.
+  due_day_from      date,
   -- Kennzeichen für die maltesische Steuererklärung TA24.
   ta24              boolean not null default false,
   -- Vertraglich vereinbarte Kaution; 0 bedeutet "keine vereinbart".

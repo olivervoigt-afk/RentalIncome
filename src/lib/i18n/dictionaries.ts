@@ -184,6 +184,7 @@ const de = {
     },
 
     start: "Mietbeginn",
+    dueFrom: "Fälligkeit umgestellt zum",
     end: "Vertragsende",
     remaining: "Restlaufzeit",
     remainingMonths: "{n} Monate",
@@ -275,6 +276,9 @@ const de = {
     tenant: "Mieter",
     frequency: "Zahlungsrhythmus",
     start: "Mietbeginn",
+    dueFrom: "Fälligkeit umgestellt zum",
+    dueFromHint:
+      "Nur ausfüllen, wenn der Fälligkeitstag mitten in der Laufzeit gewechselt hat. Eintragen: der Termin der ersten Rate danach — z. B. 01.01.2023, wenn ab da am Monatsersten fällig.",
     startHint: "Bestimmt zugleich den Fälligkeitstag jeder Rate.",
     term: "Laufzeit in Monaten",
     initialRent: "Miete pro Zahlungszeitraum (€)",
@@ -396,6 +400,7 @@ const de = {
       "Es wurde nichts gespeichert — das Objekt existiert nicht mehr oder die Seite ist veraltet. Bitte die Seite neu laden.",
     needName: "Bitte einen Objektnamen angeben.",
     needLocation: "Bitte einen Standort wählen.",
+    dueFromAfterStart: "Die Umstellung muss nach dem Mietbeginn liegen.",
     needStart: "Bitte den Mietbeginn angeben.",
     needTerm: "Die Laufzeit muss eine ganze Zahl von mindestens 1 Monat sein.",
     badFrequency: "Ungültiger Zahlungsrhythmus.",
@@ -635,6 +640,7 @@ const en: Dict = {
     },
 
     start: "Start of tenancy",
+    dueFrom: "Due day changed on",
     end: "Contract ends",
     remaining: "Remaining",
     remainingMonths: "{n} months",
@@ -726,6 +732,9 @@ const en: Dict = {
     tenant: "Tenant",
     frequency: "Payment frequency",
     start: "Start of tenancy",
+    dueFrom: "Due day changed on",
+    dueFromHint:
+      "Only fill this in if the due day changed mid-contract. Enter the date of the first instalment afterwards — e.g. 01/01/2023 if it has been due on the 1st since then.",
     startHint: "Also determines the day of the month each instalment is due.",
     term: "Term in months",
     initialRent: "Rent per payment period (€)",
@@ -846,6 +855,7 @@ const en: Dict = {
       "Nothing was saved — the property no longer exists or this page is out of date. Please reload.",
     needName: "Please enter a property name.",
     needLocation: "Please choose a location.",
+    dueFromAfterStart: "The change must fall after the start of the tenancy.",
     needStart: "Please enter the start of the tenancy.",
     needTerm: "The term must be a whole number of at least 1 month.",
     badFrequency: "Invalid payment frequency.",

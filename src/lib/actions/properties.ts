@@ -35,6 +35,7 @@ type PropertyInput = {
   start_date: string;
   term_months: number;
   payment_frequency: PaymentFrequency;
+  due_day_from: string | null;
   ta24: boolean;
   deposit_amount: number;
   notes: string;
@@ -55,6 +56,10 @@ function readProperty(formData: FormData, m: Messages): PropertyInput | string {
   }
   if (!FREQUENCIES.includes(frequency)) return m.badFrequency;
 
+  // Eine Umstellung vor dem Mietbeginn ergäbe keine Reihe von Terminen.
+  const dueFrom = text(formData, "due_day_from");
+  if (dueFrom && dueFrom <= start_date) return m.dueFromAfterStart;
+
   // Pflicht, weil Dashboard und Auswertungen nach Standort gruppieren.
   const location_id = text(formData, "location_id");
   if (!location_id) return m.needLocation;
@@ -72,6 +77,7 @@ function readProperty(formData: FormData, m: Messages): PropertyInput | string {
     start_date,
     term_months,
     payment_frequency: frequency,
+    due_day_from: text(formData, "due_day_from") || null,
     ta24: formData.get("ta24") === "on",
     deposit_amount: deposit > 0 ? deposit : 0,
     notes: text(formData, "notes"),
