@@ -6,7 +6,7 @@ import { Select } from "@/components/ui";
 import { assignInvestment } from "@/lib/actions/investments";
 
 /**
- * Zuordnung des Mietverhältnisses zu einer Investition. Speichert sofort bei
+ * Zuordnung des Mietvertrags zu einer Investition. Speichert sofort bei
  * der Auswahl — für ein einzelnes Feld wäre ein Absendeknopf ein Umweg.
  */
 export default function InvestmentSelect({

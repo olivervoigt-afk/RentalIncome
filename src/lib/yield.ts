@@ -13,7 +13,7 @@ export type YieldFigures = {
   total: number;
   /** Summe aller nachträglichen Investitionen. */
   expenses: number;
-  /** Tatsächlich geflossene Miete aller zugeordneten Mietverhältnisse. */
+  /** Tatsächlich geflossene Miete aller zugeordneten Mietverträge. */
   income: number;
   /** Jahresmiete der laufenden Verträge. */
   annualRent: number;

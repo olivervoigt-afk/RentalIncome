@@ -115,7 +115,7 @@ export async function deleteInvestment(formData: FormData) {
   const id = text(formData, "id");
   const supabase = await createClient();
 
-  // Die Mietverhältnisse bleiben bestehen, sie verlieren nur die Zuordnung.
+  // Die Mietverträge bleiben bestehen, sie verlieren nur die Zuordnung.
   await supabase.from("properties").update({ investment_id: null }).eq("investment_id", id);
   await supabase.from("investments").delete().eq("id", id);
 
@@ -169,7 +169,7 @@ export async function deleteExpense(formData: FormData) {
   revalidatePath(`/rendite/${investment_id}`);
 }
 
-/* ---------------- Zuordnung am Mietverhältnis ---------------- */
+/* ---------------- Zuordnung am Mietvertrag ---------------- */
 
 export async function assignInvestment(formData: FormData) {
   await requireEditor();

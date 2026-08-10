@@ -98,8 +98,8 @@ export type Deposit = {
 };
 
 /**
- * Die Ebene, auf der gekauft wurde. Ein Mietverhältnis gehört zu höchstens
- * einer Investition, eine Investition trägt beliebig viele Mietverhältnisse —
+ * Die Ebene, auf der gekauft wurde. Ein Mietvertrag gehört zu höchstens
+ * einer Investition, eine Investition trägt beliebig viele Mietverträge —
  * nacheinander bei Mieterwechsel, nebeneinander bei Paketkäufen.
  */
 export type Investment = {

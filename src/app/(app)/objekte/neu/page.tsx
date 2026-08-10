@@ -6,7 +6,7 @@ import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getLocations } from "@/lib/queries";
 
-export const metadata = { title: "Objekt anlegen" };
+export const metadata = { title: "Mietvertrag anlegen" };
 
 export default async function NewPropertyPage() {
   const profile = await requireProfile();

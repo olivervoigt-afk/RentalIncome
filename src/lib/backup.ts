@@ -112,7 +112,7 @@ export async function buildBackupFiles(): Promise<{
       ...counts.map((c) => `${c.table.padEnd(20)} ${String(c.rows).padStart(6)} Zeilen`),
       "",
       "Die CSV-Dateien lassen sich in Excel öffnen (Semikolon als Trennzeichen,",
-      "Komma als Dezimalzeichen). Zeilen mit Objektbezug führen den Objektnamen",
+      "Komma als Dezimalzeichen). Zeilen mit Vertragsbezug führen dessen Namen",
       "in der letzten Spalte mit.",
       "",
       "vollstaendig.json enthält dieselben Daten mit Rohwerten und dient dem",

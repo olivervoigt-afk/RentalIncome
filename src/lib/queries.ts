@@ -533,7 +533,7 @@ export type InvestmentRow = {
   investment: Investment;
   location: string | null;
   expenses: InvestmentExpense[];
-  /** Zugeordnete Mietverhältnisse, aktive zuerst. */
+  /** Zugeordnete Mietverträge, aktive zuerst. */
   properties: Property[];
   figures: YieldFigures;
   flags: YieldFlag[];
@@ -629,7 +629,7 @@ export async function getInvestment(id: string): Promise<InvestmentRow | null> {
   return all.find((row) => row.investment.id === id) ?? null;
 }
 
-/** Nur Name und Kennung — für die Zuordnung am Mietverhältnis. */
+/** Nur Name und Kennung — für die Zuordnung am Mietvertrag. */
 export async function getInvestmentOptions(): Promise<Pick<Investment, "id" | "name">[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("investments").select("id, name").order("name");
