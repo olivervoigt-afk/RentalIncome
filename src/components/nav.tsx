@@ -29,6 +29,25 @@ function GearIcon() {
   );
 }
 
+/** Sprechblase mit abgesetzter Spitze. */
+function NoteIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-[18px]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M20 14a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
 /** Tür mit Pfeil nach draussen. */
 function SignOutIcon() {
   return (
@@ -59,7 +78,7 @@ export default function Nav({
   profile: Profile;
   t: Dict;
   locale: Locale;
-  /** Anzahl ungelesener Notizen; als kleine Zahl neben dem Eintrag. */
+  /** Ungelesene Notizen; erscheinen als Zahl am Sprechblasen-Symbol. */
   unreadNotes: number;
 }) {
   const pathname = usePathname();
@@ -68,16 +87,14 @@ export default function Nav({
   // Benutzer über das Zahnrad — beide brauchen keinen eigenen Eintrag.
   // Übrig bleibt, was man täglich braucht.
   const links = [
-    { href: "/auswertungen", label: t.nav.reports, badge: 0 },
+    { href: "/auswertungen", label: t.nav.reports },
     // Kaufpreise gehen Leser nichts an; die Datenbank gäbe ihnen ohnehin
     // nichts heraus, hier verschwindet auch der Weg dorthin.
-    ...(profile.role === "viewer"
-      ? []
-      : [{ href: "/rendite", label: t.nav.yield, badge: 0 }]),
-    { href: "/notizen", label: t.nav.notes, badge: unreadNotes },
+    ...(profile.role === "viewer" ? [] : [{ href: "/rendite", label: t.nav.yield }]),
   ];
 
   const onSettings = pathname.startsWith("/einstellungen");
+  const onNotes = pathname.startsWith("/notizen");
 
   const iconButton = (active: boolean) =>
     `rounded-full p-2 transition-colors ${
@@ -112,11 +129,6 @@ export default function Nav({
                 }`}
               >
                 {link.label}
-                {link.badge ? (
-                  <span className="ml-1.5 rounded-full bg-accent px-1.5 py-px text-[11px] font-medium text-white">
-                    {link.badge}
-                  </span>
-                ) : null}
               </Link>
             );
           })}
@@ -130,6 +142,28 @@ export default function Nav({
           <span className="hidden text-[13px] text-muted sm:inline">
             {profile.full_name || profile.email}
           </span>
+
+          {/* Notizen sind kein Ort, den man ansteuert, sondern etwas, das
+              ankommt — deshalb ein Symbol mit Anzeige statt eines Eintrags
+              in der Zeile. */}
+          <Link
+            href="/notizen"
+            title={t.nav.notes}
+            aria-label={
+              unreadNotes > 0
+                ? `${t.nav.notes} (${unreadNotes})`
+                : t.nav.notes
+            }
+            aria-current={onNotes ? "page" : undefined}
+            className={`relative ${iconButton(onNotes)}`}
+          >
+            <NoteIcon />
+            {unreadNotes > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-[16px] text-white">
+                {unreadNotes > 9 ? "9+" : unreadNotes}
+              </span>
+            )}
+          </Link>
 
           <Link
             href="/einstellungen"
