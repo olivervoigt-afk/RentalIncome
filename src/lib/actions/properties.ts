@@ -36,6 +36,7 @@ type PropertyInput = {
   term_months: number;
   payment_frequency: PaymentFrequency;
   due_day_from: string | null;
+  investment_id: string | null;
   ta24: boolean;
   deposit_amount: number;
   notes: string;
@@ -78,6 +79,7 @@ function readProperty(formData: FormData, m: Messages): PropertyInput | string {
     term_months,
     payment_frequency: frequency,
     due_day_from: text(formData, "due_day_from") || null,
+    investment_id: text(formData, "investment_id") || null,
     ta24: formData.get("ta24") === "on",
     deposit_amount: deposit > 0 ? deposit : 0,
     notes: text(formData, "notes"),

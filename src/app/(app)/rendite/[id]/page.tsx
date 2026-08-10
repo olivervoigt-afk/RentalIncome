@@ -191,13 +191,21 @@ export default async function InvestmentPage({
       </Card>
 
       <Card>
-        <div className="border-b border-border px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <h2 className="text-base font-semibold">
             {t.yield.tenancies}
             <span className="ml-2 text-sm font-normal text-muted">
               {plural(t.dashboard.countProperties, properties.length)}
             </span>
           </h2>
+          {/* Der übliche Weg nach einem Kauf: erst die Investition, dann die
+              Verträge dazu. Die Zuordnung ist dabei schon vorbelegt. */}
+          <ButtonLink
+            href={`/objekte/neu?investition=${investment.id}`}
+            variant="secondary"
+          >
+            {t.form.newProperty}
+          </ButtonLink>
         </div>
         {properties.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-muted">{t.yield.noTenancies}</p>

@@ -4,15 +4,24 @@ import PropertyForm from "@/components/property-form";
 import { createProperty } from "@/lib/actions/properties";
 import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
-import { getLocations } from "@/lib/queries";
+import { getInvestmentOptions, getLocations } from "@/lib/queries";
 
 export const metadata = { title: "Mietvertrag anlegen" };
 
-export default async function NewPropertyPage() {
+export default async function NewPropertyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ investition?: string }>;
+}) {
   const profile = await requireProfile();
   if (profile.role === "viewer") redirect("/");
 
-  const [locations, { t }] = await Promise.all([getLocations(), getDict()]);
+  const { investition } = await searchParams;
+  const [locations, investments, { t }] = await Promise.all([
+    getLocations(),
+    getInvestmentOptions(),
+    getDict(),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -27,6 +36,8 @@ export default async function NewPropertyPage() {
           <PropertyForm
             action={createProperty}
             locations={locations}
+            investments={investments}
+            preselectedInvestment={investition}
             showInitialRent
           />
         </div>

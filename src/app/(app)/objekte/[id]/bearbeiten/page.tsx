@@ -5,7 +5,7 @@ import { Card, CardHeader } from "@/components/ui";
 import { updateProperty } from "@/lib/actions/properties";
 import { requireProfile } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
-import { getLocations, getPropertyDetail } from "@/lib/queries";
+import { getInvestmentOptions, getLocations, getPropertyDetail } from "@/lib/queries";
 import { fill } from "@/lib/i18n/dictionaries";
 
 export default async function EditPropertyPage({
@@ -17,9 +17,10 @@ export default async function EditPropertyPage({
   const profile = await requireProfile();
   if (profile.role === "viewer") redirect(`/objekte/${id}`);
 
-  const [detail, locations, { t }] = await Promise.all([
+  const [detail, locations, investments, { t }] = await Promise.all([
     getPropertyDetail(id),
     getLocations(),
+    getInvestmentOptions(),
     getDict(),
   ]);
   if (!detail) notFound();
@@ -45,6 +46,7 @@ export default async function EditPropertyPage({
             action={updateProperty}
             property={detail.property}
             locations={locations}
+            investments={investments}
           />
         </div>
       </Card>

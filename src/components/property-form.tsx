@@ -20,11 +20,17 @@ export default function PropertyForm({
   action,
   property,
   locations,
+  investments,
+  preselectedInvestment,
   showInitialRent = false,
 }: {
   action: Action;
   property?: Property;
   locations: Location[];
+  /** Leer für Leser — die Datenbank gibt ihnen keine Investitionen heraus. */
+  investments: { id: string; name: string }[];
+  /** Vorbelegung, wenn der Vertrag von einer Investition aus angelegt wird. */
+  preselectedInvestment?: string;
   /** Beim Anlegen kann direkt die erste Miete miterfasst werden. */
   showInitialRent?: boolean;
 }) {
@@ -62,6 +68,22 @@ export default function PropertyForm({
               ))}
           </Select>
         </Field>
+
+        {investments.length > 0 && (
+          <Field label={t.yield.assign} hint={t.yield.assignHint}>
+            <Select
+              name="investment_id"
+              defaultValue={property?.investment_id ?? preselectedInvestment ?? ""}
+            >
+              <option value="">{t.yield.unassigned}</option>
+              {investments.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
 
         <Field label={t.form.tenant}>
           <Input name="tenant_name" defaultValue={property?.tenant_name} />
