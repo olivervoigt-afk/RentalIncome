@@ -31,8 +31,15 @@ export type YieldFigures = {
   foregone: number | null;
   /** Verkehrswert − Gesamtinvest; null ohne Bewertung. */
   appreciation: number | null;
-  /** Nur bei verkauften: Einnahmen + Verkaufspreis − Gesamtinvest. */
+  /**
+   * Nur bei verkauften: Einnahmen + Verkaufspreis − Verkaufsnebenkosten
+   * − Gesamtinvest.
+   */
   result: number | null;
+  /** Verkaufspreis abzüglich Verkaufsnebenkosten. */
+  netProceeds: number | null;
+  /** Haltedauer in Jahren; bei verkauften bis zum Verkauf, sonst bis heute. */
+  years: number | null;
   sold: boolean;
 };
 
@@ -96,8 +103,20 @@ export function computeYield({
         : Number(investment.valuation) - total,
     result:
       investment.sold_on && investment.sale_price !== null && price !== null
-        ? income + Number(investment.sale_price) - total
+        ? income +
+          Number(investment.sale_price) -
+          Number(investment.sale_costs ?? 0) -
+          total
         : null,
+    netProceeds:
+      investment.sale_price === null
+        ? null
+        : Number(investment.sale_price) - Number(investment.sale_costs ?? 0),
+    years: investment.purchased_on
+      ? (new Date(investment.sold_on ?? Date.now()).getTime() -
+          new Date(investment.purchased_on).getTime()) /
+        (365.25 * 24 * 60 * 60 * 1000)
+      : null,
     sold: Boolean(investment.sold_on),
   };
 }

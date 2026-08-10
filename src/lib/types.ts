@@ -122,6 +122,8 @@ export type Investment = {
   opening_value: number | null;
   sold_on: string | null;
   sale_price: number | null;
+  /** Nebenkosten des Verkaufs, etwa die Maklerprovision. */
+  sale_costs: number | null;
   notes: string;
   created_at: string;
   created_by: string | null;

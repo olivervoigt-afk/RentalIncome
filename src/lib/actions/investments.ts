@@ -41,6 +41,7 @@ function read(formData: FormData) {
     opening_value: amount(formData, "opening_value"),
     sold_on: date(formData, "sold_on"),
     sale_price: amount(formData, "sale_price"),
+    sale_costs: amount(formData, "sale_costs"),
     notes: text(formData, "notes"),
   };
 }

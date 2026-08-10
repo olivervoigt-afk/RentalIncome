@@ -91,14 +91,6 @@ export default function InvestmentForm({
           />
         </Field>
 
-        <Field label={t.yield.marketRent} hint={t.yield.marketRentHint}>
-          <Input
-            name="market_rent"
-            inputMode="decimal"
-            defaultValue={value(investment?.market_rent)}
-          />
-        </Field>
-
         <Field label={t.yield.openingValue} hint={t.yield.openingValueHint}>
           <Input
             name="opening_value"
@@ -128,6 +120,14 @@ export default function InvestmentForm({
             name="sale_price"
             inputMode="decimal"
             defaultValue={value(investment?.sale_price)}
+          />
+        </Field>
+
+        <Field label={t.yield.saleCosts} hint={t.yield.saleCostsHint}>
+          <Input
+            name="sale_costs"
+            inputMode="decimal"
+            defaultValue={value(investment?.sale_costs)}
           />
         </Field>
       </div>

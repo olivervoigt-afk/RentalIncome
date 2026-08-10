@@ -83,14 +83,6 @@ export default async function InvestmentPage({
           <Detail label={t.yield.expenses} value={f.euro(figures.expenses)} />
           <Detail label={t.yield.annualCosts} value={money(investment.annual_costs, f, t)} />
           <Detail
-            label={t.yield.marketYield}
-            value={
-              figures.marketYield === null
-                ? t.common.none
-                : `${f.percent(figures.marketYield)} (${fill(t.yield.foregone, { amount: f.euro(figures.foregone ?? 0) })})`
-            }
-          />
-          <Detail
             label={t.yield.valuation}
             value={
               investment.valuation === null
@@ -106,6 +98,7 @@ export default async function InvestmentPage({
             <>
               <Detail label={t.yield.soldOn} value={f.date(investment.sold_on)} />
               <Detail label={t.yield.salePrice} value={money(investment.sale_price, f, t)} />
+              <Detail label={t.yield.saleCosts} value={money(investment.sale_costs, f, t)} />
             </>
           )}
           {firstPayment && (
