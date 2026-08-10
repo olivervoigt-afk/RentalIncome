@@ -77,8 +77,8 @@ export async function createInvestment(
 
   if (error) return { error: error.message };
 
-  revalidatePath("/rendite");
-  redirect(`/rendite/${data.id}`);
+  revalidatePath("/investitionen");
+  redirect(`/investitionen/${data.id}`);
 }
 
 export async function updateInvestment(
@@ -105,8 +105,8 @@ export async function updateInvestment(
   if (error) return { error: error.message };
   if (!data?.length) return { error: t.actions.nothingSaved };
 
-  revalidatePath("/rendite");
-  revalidatePath(`/rendite/${id}`);
+  revalidatePath("/investitionen");
+  revalidatePath(`/investitionen/${id}`);
   return { success: t.actions.saved };
 }
 
@@ -120,8 +120,8 @@ export async function deleteInvestment(formData: FormData) {
   await supabase.from("properties").update({ investment_id: null }).eq("investment_id", id);
   await supabase.from("investments").delete().eq("id", id);
 
-  revalidatePath("/rendite");
-  redirect("/rendite");
+  revalidatePath("/investitionen");
+  redirect("/investitionen");
 }
 
 /* ---------------- Nachträgliche Investitionen ---------------- */
@@ -152,8 +152,8 @@ export async function addExpense(
 
   if (error) return { error: error.message };
 
-  revalidatePath("/rendite");
-  revalidatePath(`/rendite/${investment_id}`);
+  revalidatePath("/investitionen");
+  revalidatePath(`/investitionen/${investment_id}`);
   return { success: t.actions.saved };
 }
 
@@ -166,8 +166,8 @@ export async function deleteExpense(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("investment_expenses").delete().eq("id", id);
 
-  revalidatePath("/rendite");
-  revalidatePath(`/rendite/${investment_id}`);
+  revalidatePath("/investitionen");
+  revalidatePath(`/investitionen/${investment_id}`);
 }
 
 /* ---------------- Zuordnung am Mietvertrag ---------------- */
@@ -181,6 +181,6 @@ export async function assignInvestment(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("properties").update({ investment_id }).eq("id", property_id);
 
-  revalidatePath("/rendite");
+  revalidatePath("/investitionen");
   revalidatePath(`/objekte/${property_id}`);
 }

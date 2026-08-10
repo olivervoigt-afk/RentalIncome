@@ -52,7 +52,7 @@ const de = {
   nav: {
     dashboard: "Dashboard",
     reports: "Auswertungen",
-    yield: "Rendite",
+    yield: "Investitionen",
     notes: "Notizen",
     users: "Benutzer",
     settings: "Einstellungen",
@@ -295,7 +295,7 @@ const de = {
 
 
   yield: {
-    title: "Rendite",
+    title: "Investitionen",
     intro:
       "Gerechnet wird auf der Ebene, auf der gekauft wurde. Ein Kauf trägt oft mehrere Mietverträge — nacheinander bei Mieterwechsel, nebeneinander bei Paketkäufen. Einnahme ist nur, was tatsächlich geflossen ist.",
     investment: "Investition",
@@ -584,7 +584,7 @@ const en: Dict = {
   nav: {
     dashboard: "Dashboard",
     reports: "Reports",
-    yield: "Return",
+    yield: "Investments",
     notes: "Notes",
     users: "Users",
     settings: "Settings",
@@ -825,7 +825,7 @@ const en: Dict = {
 
 
   yield: {
-    title: "Return",
+    title: "Investments",
     intro:
       "Figures are computed at the level at which the purchase was made. One purchase often carries several tenancies — one after another when tenants change, side by side for package buys. Only money actually received counts as income.",
     investment: "Investment",

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
-import { Flags } from "@/app/(app)/rendite/page";
+import { Flags } from "@/app/(app)/investitionen/page";
 import { Badge, ButtonLink, Card, CardHeader, Field, Input } from "@/components/ui";
 import { addExpense, deleteExpense, deleteInvestment } from "@/lib/actions/investments";
 import { requireProfile } from "@/lib/auth";
@@ -31,7 +31,7 @@ export default async function InvestmentPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/rendite" className="text-sm text-muted hover:text-foreground">
+          <Link href="/investitionen" className="text-sm text-muted hover:text-foreground">
             ← {t.yield.title}
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{investment.name}</h1>
@@ -42,7 +42,7 @@ export default async function InvestmentPage({
           <Flags t={t} flags={flags} />
         </div>
 
-        <ButtonLink href={`/rendite/${investment.id}/bearbeiten`} variant="secondary">
+        <ButtonLink href={`/investitionen/${investment.id}/bearbeiten`} variant="secondary">
           {t.common.edit}
         </ButtonLink>
       </div>

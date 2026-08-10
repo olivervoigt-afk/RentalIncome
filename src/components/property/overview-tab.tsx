@@ -57,7 +57,7 @@ export default function OverviewTab({
                 t.yield.unassigned
               }
               href={
-                property.investment_id ? `/rendite/${property.investment_id}` : undefined
+                property.investment_id ? `/investitionen/${property.investment_id}` : undefined
               }
             />
           )}

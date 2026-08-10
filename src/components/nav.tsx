@@ -90,7 +90,7 @@ export default function Nav({
     { href: "/auswertungen", label: t.nav.reports },
     // Kaufpreise gehen Leser nichts an; die Datenbank gäbe ihnen ohnehin
     // nichts heraus, hier verschwindet auch der Weg dorthin.
-    ...(profile.role === "viewer" ? [] : [{ href: "/rendite", label: t.nav.yield }]),
+    ...(profile.role === "viewer" ? [] : [{ href: "/investitionen", label: t.nav.yield }]),
   ];
 
   const onSettings = pathname.startsWith("/einstellungen");

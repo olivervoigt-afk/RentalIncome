@@ -9,7 +9,7 @@ import { fill, plural, type Dict } from "@/lib/i18n/dictionaries";
 import { getInvestments, getPropertiesWithSummary, type InvestmentRow } from "@/lib/queries";
 import type { YieldFlag } from "@/lib/yield";
 
-export const metadata = { title: "Rendite" };
+export const metadata = { title: "Investitionen" };
 
 const TABS = ["bestand", "verkauft"] as const;
 type Tab = (typeof TABS)[number];
@@ -51,12 +51,12 @@ export default async function YieldPage({
           <h1 className="text-2xl font-semibold tracking-tight">{t.yield.title}</h1>
           <p className="mt-1 max-w-3xl text-sm text-muted">{t.yield.intro}</p>
         </div>
-        <ButtonLink href="/rendite/neu">{t.yield.newInvestment}</ButtonLink>
+        <ButtonLink href="/investitionen/neu">{t.yield.newInvestment}</ButtonLink>
       </div>
 
       <TabNav
         active={tab}
-        basePath="/rendite"
+        basePath="/investitionen"
         defaultKey="bestand"
         items={[
           { key: "bestand", label: t.yield.tabHeld, count: held.length },
@@ -348,7 +348,7 @@ function Name({
 }) {
   return (
     <td className="px-5 py-3 align-top">
-      <Link href={`/rendite/${id}`} className="font-medium hover:text-accent hover:underline">
+      <Link href={`/investitionen/${id}`} className="font-medium hover:text-accent hover:underline">
         {name}
       </Link>
       <span className="block text-xs text-muted">

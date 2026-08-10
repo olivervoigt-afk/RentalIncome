@@ -143,7 +143,7 @@ export default function InvestmentForm({
           {pending ? t.common.saving : investment ? t.form.saveChanges : t.form.create}
         </Button>
         <ButtonLink
-          href={investment ? `/rendite/${investment.id}` : "/rendite"}
+          href={investment ? `/investitionen/${investment.id}` : "/investitionen"}
           variant="secondary"
         >
           {t.common.cancel}

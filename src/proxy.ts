@@ -11,6 +11,7 @@ const MOVED: Record<string, string> = {
   "/ta24": "/auswertungen?standort=ta24",
   "/einnahmen": "/auswertungen",
   "/benutzer": "/einstellungen?tab=benutzer",
+  "/rendite": "/investitionen",
 };
 
 /**
