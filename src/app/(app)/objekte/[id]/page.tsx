@@ -14,6 +14,7 @@ import { getProfile } from "@/lib/auth";
 import { formatters } from "@/lib/format";
 import { getDict } from "@/lib/i18n";
 import {
+  getInvestmentOptions,
   getPaymentSources,
   getProfiles,
   getPropertyDetail,
@@ -46,14 +47,16 @@ export default async function PropertyDetailPage({
   const { id } = await params;
   const query = await searchParams;
 
-  const [profile, detail, sources, notes, people, { t, locale }] = await Promise.all([
-    getProfile(),
-    getPropertyDetail(id),
-    getPaymentSources(),
-    getPropertyNotes(id),
-    getProfiles(),
-    getDict(),
-  ]);
+  const [profile, detail, sources, notes, people, investments, { t, locale }] =
+    await Promise.all([
+      getProfile(),
+      getPropertyDetail(id),
+      getPaymentSources(),
+      getPropertyNotes(id),
+      getProfiles(),
+      getInvestmentOptions(),
+      getDict(),
+    ]);
   const f = formatters(locale);
 
   if (!detail) notFound();
@@ -175,6 +178,7 @@ export default async function PropertyDetailPage({
           periods={periods}
           summary={summary}
           canEdit={canEdit}
+          investments={investments}
         />
       )}
 

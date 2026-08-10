@@ -61,6 +61,8 @@ export type Property = {
    * null = nie umgestellt.
    */
   due_day_from: string | null;
+  /** Zugehörige Investition; null, solange nicht zugeordnet. */
+  investment_id: string | null;
   ta24: boolean;
   /** Vertraglich vereinbarte Kaution; 0 bedeutet "keine vereinbart". */
   deposit_amount: number;
@@ -91,6 +93,46 @@ export type Deposit = {
    * in Saldo und Steuerauswertung.
    */
   payment_id: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+/**
+ * Die Ebene, auf der gekauft wurde. Ein Mietverhältnis gehört zu höchstens
+ * einer Investition, eine Investition trägt beliebig viele Mietverhältnisse —
+ * nacheinander bei Mieterwechsel, nebeneinander bei Paketkäufen.
+ */
+export type Investment = {
+  id: string;
+  name: string;
+  location_id: string | null;
+  purchased_on: string | null;
+  purchase_price: number | null;
+  /** Nebenkosten in Prozent des Kaufpreises. */
+  costs_percent: number | null;
+  /** Nebenkosten absolut; sticht den Prozentsatz. */
+  costs_amount: number | null;
+  /** Nicht umlagefähige Kosten pro Jahr, pauschal. */
+  annual_costs: number | null;
+  valuation: number | null;
+  valued_on: string | null;
+  /** Wert zu Beginn der Mieterfassung; leer = Gesamtinvest als Näherung. */
+  opening_value: number | null;
+  sold_on: string | null;
+  sale_price: number | null;
+  notes: string;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type InvestmentExpense = {
+  id: string;
+  investment_id: string;
+  happened_on: string;
+  amount: number;
+  description: string;
+  /** Werterhöhend statt Instandhaltung — für den Steuerberater. */
+  value_adding: boolean;
   created_at: string;
   created_by: string | null;
 };

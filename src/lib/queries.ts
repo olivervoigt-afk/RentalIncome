@@ -2,6 +2,12 @@ import { getProfile } from "./auth";
 import { createClient } from "./supabase/server";
 import { summarizeDeposits, taxableRetentions, type DepositSummary } from "./deposits";
 import {
+  computeYield,
+  yieldFlags,
+  type YieldFigures,
+  type YieldFlag,
+} from "./yield";
+import {
   annualRent,
   dueBetween,
   summarize,
@@ -11,6 +17,8 @@ import type {
   ContractHistoryEntry,
   Credit,
   Deposit,
+  Investment,
+  InvestmentExpense,
   Location,
   Payment,
   PaymentSource,
@@ -518,4 +526,112 @@ export async function getRecentActivity(limit = 6): Promise<ActivityEntry[]> {
   ]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
+}
+
+
+export type InvestmentRow = {
+  investment: Investment;
+  location: string | null;
+  expenses: InvestmentExpense[];
+  /** Zugeordnete Mietverhältnisse, aktive zuerst. */
+  properties: Property[];
+  figures: YieldFigures;
+  flags: YieldFlag[];
+  firstPayment: string | null;
+};
+
+/**
+ * Alle Investitionen mit ihren Kennzahlen.
+ *
+ * Einnahme ist nur, was tatsächlich geflossen ist: Zahlungen ja, Gutschriften
+ * nein — ihnen steht kein Geldeingang gegenüber. Kautionen bleiben ohnehin
+ * aussen vor, da sie in einer eigenen Tabelle liegen.
+ */
+export async function getInvestments(): Promise<InvestmentRow[]> {
+  const supabase = await createClient();
+
+  const [investments, expenses, properties, periods, payments, locations] =
+    await Promise.all([
+      supabase.from("investments").select("*").order("name"),
+      supabase.from("investment_expenses").select("*").order("happened_on"),
+      supabase.from("properties").select("*").order("name"),
+      fetchAll<RentPeriod>(supabase, "rent_periods"),
+      fetchAll<Payment>(supabase, "payments"),
+      supabase.from("locations").select("*"),
+    ]);
+
+  // Ohne Bearbeiterrechte liefert die Datenbank hier nichts — so gewollt.
+  if (investments.error) return [];
+
+  const locationName = new Map(
+    ((locations.data ?? []) as Location[]).map((l) => [l.id, l.name]),
+  );
+  const byPeriod = groupBy(periods);
+  const byPayment = groupBy(payments);
+
+  const expensesOf = new Map<string, InvestmentExpense[]>();
+  for (const expense of (expenses.data ?? []) as InvestmentExpense[]) {
+    expensesOf.set(expense.investment_id, [
+      ...(expensesOf.get(expense.investment_id) ?? []),
+      expense,
+    ]);
+  }
+
+  const propertiesOf = new Map<string, Property[]>();
+  for (const property of (properties.data ?? []) as Property[]) {
+    if (!property.investment_id) continue;
+    propertiesOf.set(property.investment_id, [
+      ...(propertiesOf.get(property.investment_id) ?? []),
+      property,
+    ]);
+  }
+
+  const now = new Date();
+
+  return ((investments.data ?? []) as Investment[]).map((investment) => {
+    const own = (propertiesOf.get(investment.id) ?? []).sort(
+      (a, b) => Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name, "de"),
+    );
+
+    let income = 0;
+    let annual = 0;
+    let firstPayment: string | null = null;
+
+    for (const property of own) {
+      for (const payment of byPayment.get(property.id) ?? []) {
+        income += Number(payment.amount);
+        if (!firstPayment || payment.paid_on < firstPayment) firstPayment = payment.paid_on;
+      }
+      if (!property.archived) {
+        annual += annualRent(property, byPeriod.get(property.id) ?? [], now);
+      }
+    }
+
+    const own_expenses = expensesOf.get(investment.id) ?? [];
+    const figures = computeYield({ investment, expenses: own_expenses, income, annualRent: annual });
+
+    return {
+      investment,
+      location: investment.location_id
+        ? (locationName.get(investment.location_id) ?? null)
+        : null,
+      expenses: own_expenses,
+      properties: own,
+      figures,
+      flags: yieldFlags(investment, figures, firstPayment),
+      firstPayment,
+    };
+  });
+}
+
+export async function getInvestment(id: string): Promise<InvestmentRow | null> {
+  const all = await getInvestments();
+  return all.find((row) => row.investment.id === id) ?? null;
+}
+
+/** Nur Name und Kennung — für die Zuordnung am Mietverhältnis. */
+export async function getInvestmentOptions(): Promise<Pick<Investment, "id" | "name">[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("investments").select("id, name").order("name");
+  return error ? [] : ((data ?? []) as Pick<Investment, "id" | "name">[]);
 }

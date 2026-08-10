@@ -44,9 +44,22 @@ export function formatDateTime(value: string | Date, locale: Locale = "de"): str
 }
 
 /** Gebündelte Formatierer, damit Komponenten die Sprache nicht durchreichen müssen. */
+/**
+ * Anteil als Prozentwert. Zwei Nachkommastellen, weil bei Renditen der
+ * Unterschied zwischen 3,4 % und 3,45 % über Jahrzehnte spürbar ist.
+ */
+export function formatPercent(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB", {
+    style: "percent",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export function formatters(locale: Locale) {
   return {
     euro: (value: number) => formatEuro(value, locale),
+    percent: (value: number) => formatPercent(value, locale),
     date: (value: string | Date) => formatDate(value, locale),
     dateTime: (value: string | Date) => formatDateTime(value, locale),
   };

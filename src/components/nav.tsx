@@ -69,6 +69,11 @@ export default function Nav({
   // Übrig bleibt, was man täglich braucht.
   const links = [
     { href: "/auswertungen", label: t.nav.reports, badge: 0 },
+    // Kaufpreise gehen Leser nichts an; die Datenbank gäbe ihnen ohnehin
+    // nichts heraus, hier verschwindet auch der Weg dorthin.
+    ...(profile.role === "viewer"
+      ? []
+      : [{ href: "/rendite", label: t.nav.yield, badge: 0 }]),
     { href: "/notizen", label: t.nav.notes, badge: unreadNotes },
   ];
 

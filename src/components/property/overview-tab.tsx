@@ -1,5 +1,6 @@
 import DangerAction from "@/components/danger-action";
 import InlineForm from "@/components/inline-form";
+import InvestmentSelect from "@/components/property/investment-select";
 import { Card, CardHeader, Field, Input } from "@/components/ui";
 import { addRentPeriod, deleteRentPeriod } from "@/lib/actions/properties";
 import type { Formatters } from "@/lib/format";
@@ -15,6 +16,7 @@ export default function OverviewTab({
   periods,
   summary,
   canEdit,
+  investments,
 }: {
   t: Dict;
   f: Formatters;
@@ -22,6 +24,8 @@ export default function OverviewTab({
   periods: RentPeriod[];
   summary: PropertySummary;
   canEdit: boolean;
+  /** Leer für Leser — die Datenbank gibt ihnen keine Investitionen heraus. */
+  investments: { id: string; name: string }[];
 }) {
   return (
     <div className="space-y-6">
@@ -52,6 +56,17 @@ export default function OverviewTab({
             />
           )}
         </dl>
+
+        {investments.length > 0 && canEdit && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+            <span className="text-sm text-muted">{t.yield.assign}</span>
+            <InvestmentSelect
+              propertyId={property.id}
+              current={property.investment_id}
+              options={investments}
+            />
+          </div>
+        )}
 
         {property.notes && (
           <div className="mt-4 border-t border-border pt-4">
