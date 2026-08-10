@@ -119,23 +119,45 @@ function HeldView({
       total: acc.total + r.figures.total,
       income: acc.income + r.figures.income,
       annual: acc.annual + r.figures.annualRent,
-      value: acc.value + (r.investment.valuation === null ? 0 : Number(r.investment.valuation)),
     }),
-    { total: 0, income: 0, annual: 0, value: 0 },
+    { total: 0, income: 0, annual: 0 },
   );
+
+  /* Der Wertzuwachs darf nur die bewerteten Investitionen vergleichen. Zöge
+     man den Gesamtinvest aller vom Wert der bewerteten ab, entstünde eine
+     Zahl, die umso schlechter aussieht, je mehr Bewertungen fehlen. */
+  const valued = rows.filter((r) => r.investment.valuation !== null);
+  const value = valued.reduce((sum, r) => sum + Number(r.investment.valuation), 0);
+  const valuedCost = valued.reduce((sum, r) => sum + r.figures.total, 0);
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Stat label={t.yield.total} value={f.euro(totals.total)} />
         <Stat label={t.yield.income} value={f.euro(totals.income)} />
         <Stat
           label={t.yield.payback}
           value={totals.total > 0 ? f.percent(totals.income / totals.total) : t.common.none}
         />
+
         <Stat
           label={t.yield.grossYield}
           value={totals.total > 0 ? f.percent(totals.annual / totals.total) : t.common.none}
+        />
+        <Stat
+          label={t.yield.valuation}
+          value={valued.length > 0 ? f.euro(value) : t.common.none}
+          hint={
+            valued.length < rows.length
+              ? fill(t.yield.valuedCount, { n: valued.length, all: rows.length })
+              : undefined
+          }
+        />
+        <Stat
+          label={t.yield.appreciation}
+          value={valued.length > 0 ? f.euro(value - valuedCost) : t.common.none}
+          hint={valued.length > 0 ? f.percent(value / valuedCost - 1) : undefined}
+          tone={valued.length > 0}
         />
       </div>
 
@@ -192,10 +214,10 @@ function HeldView({
                 <td className="tabular px-5 py-3 text-right">{f.euro(totals.income)}</td>
                 <td colSpan={2} />
                 <td className="tabular px-5 py-3 text-right">
-                  {totals.value > 0 ? f.euro(totals.value) : ""}
+                  {valued.length > 0 ? f.euro(value) : ""}
                 </td>
                 <td className="tabular px-5 py-3 text-right">
-                  {totals.value > 0 ? f.euro(totals.value - totals.total) : ""}
+                  {valued.length > 0 ? f.euro(value - valuedCost) : ""}
                 </td>
               </tr>
             </tfoot>
@@ -380,7 +402,18 @@ export function Flags({ t, flags }: { t: Dict; flags: YieldFlag[] }) {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: boolean }) {
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  /** Färbt den Wert nach Vorzeichen — nur wo ein Minus etwas bedeutet. */
+  tone?: boolean;
+}) {
   const negative = tone && value.trim().startsWith("-");
   return (
     <Card className="px-5 py-4">
@@ -392,6 +425,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: boo
       >
         {value}
       </p>
+      {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
     </Card>
   );
 }
