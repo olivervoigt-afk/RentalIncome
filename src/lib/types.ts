@@ -114,6 +114,8 @@ export type Investment = {
   costs_amount: number | null;
   /** Nicht umlagefähige Kosten pro Jahr, pauschal. */
   annual_costs: number | null;
+  /** Ortsübliche Jahresmiete aller Einheiten; erlaubt den Vergleich. */
+  market_rent: number | null;
   valuation: number | null;
   valued_on: string | null;
   /** Wert zu Beginn der Mieterfassung; leer = Gesamtinvest als Näherung. */

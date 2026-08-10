@@ -137,6 +137,7 @@ function InvestmentTable({
               <th className="px-5 py-3 text-right font-medium">{t.yield.income}</th>
               <th className="px-5 py-3 text-right font-medium">{t.yield.payback}</th>
               <th className="px-5 py-3 text-right font-medium">{t.yield.grossYield}</th>
+              <th className="px-5 py-3 text-right font-medium">{t.yield.marketYield}</th>
               <th className="px-5 py-3 text-right font-medium">
                 {showResult ? t.yield.result : t.yield.appreciation}
               </th>
@@ -167,6 +168,11 @@ function InvestmentTable({
                 </td>
                 <td className="tabular px-5 py-3 text-right font-medium">
                   {figures.grossYield === null ? t.common.none : f.percent(figures.grossYield)}
+                </td>
+                {/* Steht die tatsächliche Miete bewusst unter dem Markt, wäre
+                    die Rendite allein irreführend. */}
+                <td className="tabular px-5 py-3 text-right text-muted">
+                  {figures.marketYield === null ? t.common.none : f.percent(figures.marketYield)}
                 </td>
                 <td
                   className={`tabular px-5 py-3 text-right ${

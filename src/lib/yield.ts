@@ -25,6 +25,10 @@ export type YieldFigures = {
   netYield: number | null;
   /** Jahre bis zur Amortisation bei heutiger Miete; null wenn erreicht. */
   yearsToPayback: number | null;
+  /** Rendite, die bei ortsüblicher Miete erreichbar wäre. */
+  marketYield: number | null;
+  /** Ortsübliche Miete − tatsächliche Jahresmiete; was bewusst verzichtet wird. */
+  foregone: number | null;
   /** Verkehrswert − Gesamtinvest; null ohne Bewertung. */
   appreciation: number | null;
   /** Nur bei verkauften: Einnahmen + Verkaufspreis − Gesamtinvest. */
@@ -78,6 +82,12 @@ export function computeYield({
     payback: ratio(income),
     grossYield: ratio(annualRent),
     netYield: netAnnual === null ? null : ratio(netAnnual),
+    marketYield:
+      investment.market_rent === null ? null : ratio(Number(investment.market_rent)),
+    foregone:
+      investment.market_rent === null
+        ? null
+        : Number(investment.market_rent) - annualRent,
     yearsToPayback:
       price === null || outstanding <= 0 || yearly <= 0 ? null : outstanding / yearly,
     appreciation:

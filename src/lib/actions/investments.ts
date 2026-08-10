@@ -35,6 +35,7 @@ function read(formData: FormData) {
     costs_percent: amount(formData, "costs_percent"),
     costs_amount: amount(formData, "costs_amount"),
     annual_costs: amount(formData, "annual_costs"),
+    market_rent: amount(formData, "market_rent"),
     valuation: amount(formData, "valuation"),
     valued_on: date(formData, "valued_on"),
     opening_value: amount(formData, "opening_value"),

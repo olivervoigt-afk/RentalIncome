@@ -83,6 +83,14 @@ export default async function InvestmentPage({
           <Detail label={t.yield.expenses} value={f.euro(figures.expenses)} />
           <Detail label={t.yield.annualCosts} value={money(investment.annual_costs, f, t)} />
           <Detail
+            label={t.yield.marketYield}
+            value={
+              figures.marketYield === null
+                ? t.common.none
+                : `${f.percent(figures.marketYield)} (${fill(t.yield.foregone, { amount: f.euro(figures.foregone ?? 0) })})`
+            }
+          />
+          <Detail
             label={t.yield.valuation}
             value={
               investment.valuation === null
