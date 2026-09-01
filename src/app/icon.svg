@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Dieselbe Marke wie in der Anwendung, hier mit festen Farben:
+       im Browser-Reiter gibt es keine CSS-Variablen. -->
+  <rect x="1.5" y="1.5" width="29" height="29" rx="8.5" fill="#1f5eff"/>
+  <path d="M16 7.4 24.6 15v9.6a1.6 1.6 0 0 1-1.6 1.6H9a1.6 1.6 0 0 1-1.6-1.6V15z" fill="#ffffff"/>
+  <path d="M13.6 26.2v-6a2.4 2.4 0 0 1 4.8 0v6z" fill="#1f5eff"/>
+</svg>

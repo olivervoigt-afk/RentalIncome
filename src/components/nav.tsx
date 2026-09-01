@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LocaleSwitch from "@/components/locale-switch";
+import Logo from "@/components/logo";
 import { signOut } from "@/lib/actions/auth";
 import type { Dict, Locale } from "@/lib/i18n/dictionaries";
 import type { Profile } from "@/lib/types";
@@ -108,9 +109,12 @@ export default function Nav({
       <div className="mx-auto flex h-12 max-w-[1600px] items-center px-6">
         <Link
           href="/"
-          className="text-[15px] font-semibold tracking-tight transition-opacity hover:opacity-70"
+          className="flex items-center gap-2 text-[15px] font-semibold tracking-tight transition-opacity hover:opacity-70"
         >
-          Oylio <span className="font-normal text-muted">Rental</span>
+          <Logo className="size-[22px]" />
+          <span>
+            Oylio <span className="font-normal text-muted">Rental</span>
+          </span>
         </Link>
 
         <nav className="ml-8 flex items-center gap-6">
