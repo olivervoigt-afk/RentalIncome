@@ -552,8 +552,18 @@ function ActivityCard({
                   {f.euro(entry.amount)}
                 </span>
               </div>
+              {/* Die Karte sortiert nach dem Erfassungszeitpunkt, zeigt aber
+                  den Vorgang. Fallen beide auseinander — etwa weil eine alte
+                  Zahlung nachgetragen wurde —, sieht die Zeile sonst aus, als
+                  stimme die Reihenfolge nicht. */}
               <p className="text-xs text-muted">
                 {kindLabel[entry.kind]} · {f.date(entry.happenedOn)}
+                {entry.createdAt.slice(0, 10) !== entry.happenedOn &&
+                  ` · ${fill(t.dashboard.activityOn, {
+                    // createdAt ist ein Zeitstempel; f.date erwartet ein
+                    // reines Datum und liefert sonst "Invalid Date".
+                    date: f.date(entry.createdAt.slice(0, 10)),
+                  })}`}
                 {entry.by && ` · ${fill(t.dashboard.activityBy, { name: entry.by })}`}
               </p>
             </li>
